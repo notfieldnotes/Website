@@ -1,0 +1,240 @@
+{% comment %}
+  Smooth scroll - inertia scrolling in the manner of locomotive-scroll / Lenis.
+
+  It eases the real document scroll position rather than transforming a
+  wrapper, so sticky sections, the stacking cards, the bottle ring and every
+  other scroll-driven section on the page keep working exactly as they do now.
+  Place it once on a template; it drives the whole page.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+-%}
+
+<div class="smsc" id="smsc-{{ sid }}" aria-hidden="true" hidden></div>
+
+<script>
+  (function () {
+    var KEY = '__nfnSmoothScroll';
+    var ID = 'smsc-{{ sid }}';
+
+    var SMOOTHNESS = {{ s.smoothness | default: 7 }};
+    var WHEEL = {{ s.wheel_speed | default: 100 }} / 100;
+    var ON_TOUCH = {{ s.touch_devices | default: false }};
+    var ON_KEYS = {{ s.keyboard | default: true }};
+
+    /* a higher setting means a longer glide */
+    var EASE = Math.max(0.04, 0.24 - (SMOOTHNESS - 1) * 0.02);
+
+    /* an earlier copy of this section may still be driving the page */
+    if (window[KEY]) {
+      window[KEY].destroy();
+      window[KEY] = null;
+    }
+
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    if (reduced) return;
+    if (coarse && !ON_TOUCH) return;
+
+    var root = document.documentElement;
+    var dead = false;
+    var rafId = null;
+    var target = window.scrollY || window.pageYOffset || 0;
+    var current = target;
+    var applied = target;
+    var lastT = 0;
+    var running = false;
+
+    var prevBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+
+    function limit() {
+      return Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight);
+    }
+    function clamp(v) {
+      var max = limit();
+      return v < 0 ? 0 : (v > max ? max : v);
+    }
+
+    /* let a scrollable panel under the pointer keep its own scroll */
+    function insideScroller(node, delta) {
+      while (node && node !== document.body && node !== root) {
+        if (node.nodeType === 1) {
+          if (node.hasAttribute('data-no-smooth-scroll')) return true;
+          var st = getComputedStyle(node);
+          var oy = st.overflowY;
+          if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
+            var room = delta > 0
+              ? node.scrollHeight - node.clientHeight - node.scrollTop
+              : node.scrollTop;
+            if (room > 1) return true;
+          }
+        }
+        node = node.parentNode;
+      }
+      return false;
+    }
+
+    function start() {
+      if (running || dead) return;
+      running = true;
+      lastT = 0;
+      rafId = requestAnimationFrame(frame);
+    }
+
+    function frame(t) {
+      if (dead) return;
+      if (!lastT) lastT = t;
+      var dt = Math.min(64, t - lastT) / 1000;
+      lastT = t;
+
+      /* frame-rate independent easing, so a 120Hz screen glides the same */
+      var a = 1 - Math.pow(1 - EASE, dt * 60);
+      current += (target - current) * a;
+
+      if (Math.abs(target - current) < 0.25) current = target;
+
+      if (Math.abs(current - applied) >= 0.05) {
+        applied = current;
+        window.scrollTo(0, Math.round(current * 100) / 100);
+      }
+
+      if (current === target) {
+        running = false;
+        rafId = null;
+        return;
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+
+    /* anything that moves the page itself - a scrollbar drag, an anchor jump,
+       the theme editor - resets the glide to where the page actually is */
+    function onScroll() {
+      var y = window.scrollY || window.pageYOffset || 0;
+      if (Math.abs(y - applied) > 2) {
+        target = y;
+        current = y;
+        applied = y;
+      }
+    }
+
+    function push(delta) {
+      target = clamp(target + delta);
+      start();
+    }
+
+    function normalize(e) {
+      var d = e.deltaY;
+      if (e.deltaMode === 1) d *= 16;
+      else if (e.deltaMode === 2) d *= window.innerHeight;
+      return d;
+    }
+
+    function onWheel(e) {
+      if (dead || e.defaultPrevented) return;
+      if (e.ctrlKey || e.metaKey) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (insideScroller(e.target, e.deltaY)) return;
+      e.preventDefault();
+      push(normalize(e) * WHEEL);
+    }
+
+    var KEYS = {
+      ArrowDown: 1, ArrowUp: -1, PageDown: 1, PageUp: -1,
+      Down: 1, Up: -1, Home: 'top', End: 'bottom', ' ': 1, Spacebar: 1
+    };
+
+    function typing(node) {
+      if (!node || node.nodeType !== 1) return false;
+      var tag = node.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+        tag === 'CANVAS' || node.isContentEditable;
+    }
+
+    function onKey(e) {
+      if (dead || !ON_KEYS || e.defaultPrevented) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (typing(e.target)) return;
+      var k = KEYS[e.key];
+      if (k === undefined) return;
+      if (insideScroller(e.target, typeof k === 'number' ? k : 1)) return;
+
+      e.preventDefault();
+      if (k === 'top') { target = 0; }
+      else if (k === 'bottom') { target = limit(); }
+      else {
+        var step = (e.key === 'PageDown' || e.key === 'PageUp' || e.key === ' ' || e.key === 'Spacebar')
+          ? window.innerHeight * 0.9
+          : 90;
+        target = clamp(target + k * step * (e.shiftKey && (e.key === ' ' || e.key === 'Spacebar') ? -1 : 1));
+      }
+      start();
+    }
+
+    /* touch, only when it is switched on */
+    var touchY = 0;
+    function onTouchStart(e) {
+      if (!e.touches || e.touches.length !== 1) return;
+      touchY = e.touches[0].clientY;
+      target = current = applied = window.scrollY || window.pageYOffset || 0;
+    }
+    function onTouchMove(e) {
+      if (dead || e.defaultPrevented) return;
+      if (!e.touches || e.touches.length !== 1) return;
+      var y = e.touches[0].clientY;
+      var d = touchY - y;
+      touchY = y;
+      if (insideScroller(e.target, d)) return;
+      e.preventDefault();
+      push(d * 1.6 * WHEEL);
+    }
+
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('keydown', onKey, { passive: false });
+    if (ON_TOUCH) {
+      window.addEventListener('touchstart', onTouchStart, { passive: true });
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+    }
+
+    function destroy() {
+      dead = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      running = false;
+      root.style.scrollBehavior = prevBehavior;
+      window.removeEventListener('wheel', onWheel, { passive: false });
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('keydown', onKey, { passive: false });
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove, { passive: false });
+    }
+
+    window[KEY] = { id: ID, destroy: destroy, to: function (y) { target = clamp(y); start(); } };
+
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && ID.indexOf(e.detail.sectionId) !== -1) {
+        destroy();
+        if (window[KEY] && window[KEY].id === ID) window[KEY] = null;
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Smooth scroll",
+  "tag": "div",
+  "class": "section-smooth-scroll",
+  "settings": [
+    { "type": "paragraph", "content": "Eases the page as it scrolls, the way locomotive-scroll does. Place it once on a template - it drives the whole page. It switches itself off for anyone who has asked for reduced motion." },
+    { "type": "range", "id": "smoothness", "label": "Glide", "min": 1, "max": 10, "step": 1, "default": 7, "info": "1 is nearly instant, 10 is a long drift." },
+    { "type": "range", "id": "wheel_speed", "label": "Wheel speed", "min": 50, "max": 200, "step": 5, "unit": "%", "default": 100 },
+    { "type": "checkbox", "id": "keyboard", "label": "Ease the arrow and page keys too", "default": true },
+    { "type": "checkbox", "id": "touch_devices", "label": "Also on phones and tablets", "default": false, "info": "Phones already have their own momentum scrolling. Turn this on only if you want the same glide there." }
+  ],
+  "presets": [ { "name": "Smooth scroll" } ]
+}
+{% endschema %}

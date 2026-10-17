@@ -1,0 +1,294 @@
+{% comment %}
+  Word reveal - the heading treatment from scroll.locomotive.ca. Every heading
+  on the page is split into words that sit dimmed and come up to full as the
+  scroll passes through them, one word after the next.
+
+  Place it once on a template, like Smooth scroll. It leaves the words in the
+  page as real text, so search engines and screen readers see the heading
+  exactly as before.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+
+  assign levels = ''
+  if s.use_h1
+    assign levels = levels | append: 'h1,'
+  endif
+  if s.use_h2
+    assign levels = levels | append: 'h2,'
+  endif
+  if s.use_h3
+    assign levels = levels | append: 'h3,'
+  endif
+  if s.use_h4
+    assign levels = levels | append: 'h4,'
+  endif
+  if s.extra_selector != blank
+    assign levels = levels | append: s.extra_selector
+  endif
+  assign levels = levels | split: ',' | join: ','
+-%}
+
+<div class="wrv" id="wrv-{{ sid }}" aria-hidden="true" hidden></div>
+
+<style>
+  /* the outer span is the window, the inner one is the word that rides up
+     through it, so the letters are always solid - never a faded ghost */
+  .wrv-w {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding: 0.14em 0.02em;
+    margin: -0.14em -0.02em;
+  }
+  .wrv-i {
+    display: inline-block;
+    opacity: var(--wrv-o, 1);
+    transform: translateY(var(--wrv-t, 0%));
+    will-change: transform;
+  }
+  .wrv--fade .wrv-w { overflow: visible; }
+  @media (prefers-reduced-motion: reduce) {
+    .wrv-i { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<script>
+  (function () {
+    var KEY = '__nfnWordReveal';
+    var ID = 'wrv-{{ sid }}';
+
+    var PICK = {{ levels | json }};
+    var SKIP = {{ s.skip_selector | json }};
+    var STYLE = {{ s.style | json }};
+    var ONCE = {{ s.once | default: true }};
+    var DIM = {{ s.dim | default: 25 }} / 100;
+    var START = {{ s.start_at | default: 85 }} / 100;
+    var FINISH = {{ s.finish_at | default: 45 }} / 100;
+    var SPREAD = {{ s.spread | default: 3 }};
+    var RISE = {{ s.rise | default: 0 }};
+    var ON_MOBILE = {{ s.on_mobile | default: true }};
+
+    if (!PICK) return;
+
+    if (window[KEY]) { window[KEY].destroy(); window[KEY] = null; }
+
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+    if (!ON_MOBILE && window.innerWidth && window.innerWidth < 750) return;
+
+    /* headings that run their own animation are left alone */
+    var BUILT_IN_SKIP = [
+      '[data-no-word-reveal]',
+      '.mrq__track *', '.bmqh *', '.brand-marquee-wrapper *',
+      '.scrolling-text *', '[class*="marquee"] *',
+      '.wsl *', '[class*="word-slab"] *',
+      '.hiw__heading', '.apx-logo *', '.sob *'
+    ].join(',');
+
+    var main = document.querySelector('main') || document.body;
+    var items = [];
+    var rafId = null;
+    var dead = false;
+
+    function skipped(el) {
+      try {
+        if (el.closest(BUILT_IN_SKIP)) return true;
+        if (SKIP && SKIP.trim() && el.closest(SKIP)) return true;
+      } catch (e) { /* a bad selector should not take the page down */ }
+      /* a heading that is only an image or an icon has nothing to split */
+      return !el.textContent || !el.textContent.trim();
+    }
+
+    /* wrap every word, leaving any inline markup where it is */
+    function split(el) {
+      var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      var texts = [];
+      var n;
+      while ((n = walker.nextNode())) {
+        if (n.nodeValue && n.nodeValue.trim()) texts.push(n);
+      }
+      if (!texts.length) return null;
+
+      var words = [];
+      texts.forEach(function (node) {
+        var frag = document.createDocumentFragment();
+        var parts = node.nodeValue.split(/(\s+)/);
+        parts.forEach(function (part) {
+          if (!part) return;
+          if (/^\s+$/.test(part)) {
+            frag.appendChild(document.createTextNode(part));
+          } else {
+            var w = document.createElement('span');
+            w.className = 'wrv-w';
+            var inner = document.createElement('span');
+            inner.className = 'wrv-i';
+            inner.textContent = part;
+            w.appendChild(inner);
+            frag.appendChild(w);
+            words.push(inner);
+          }
+        });
+        node.parentNode.replaceChild(frag, node);
+      });
+      return words.length ? words : null;
+    }
+
+    function paint(item) {
+      var vh = window.innerHeight;
+      if (!vh) return;
+
+      var r = item.el.getBoundingClientRect();
+      var from = vh * START;
+      var to = vh * FINISH;
+      var span = from - to;
+      var p = span > 1 ? (from - r.top) / span : 1;
+      if (p < 0) p = 0; else if (p > 1) p = 1;
+
+      /* once a heading has arrived it stays arrived */
+      if (ONCE) {
+        if (p <= item.peak) p = item.peak; else item.peak = p;
+        if (item.done) return;
+        if (p >= 0.999) item.done = true;
+      }
+
+      var n = item.words.length;
+      var reach = p * (n - 1 + SPREAD);
+
+      for (var i = 0; i < n; i++) {
+        var o = (reach - i) / SPREAD;
+        if (o < 0) o = 0; else if (o > 1) o = 1;
+        /* ease the end of each word so it lands softly */
+        o = o * o * (3 - 2 * o);
+
+        var st = item.words[i].style;
+        if (STYLE === 'fade') {
+          st.setProperty('--wrv-o', (DIM + (1 - DIM) * o).toFixed(3));
+          st.setProperty('--wrv-t', RISE ? ((1 - o) * RISE).toFixed(2) + 'px' : '0%');
+        } else {
+          /* solid letters sliding up out of their own line - nothing fades */
+          st.setProperty('--wrv-o', '1');
+          st.setProperty('--wrv-t', ((1 - o) * 105).toFixed(2) + '%');
+        }
+      }
+    }
+
+    function frame() {
+      if (dead) { rafId = null; return; }
+      var live = false;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].visible) { paint(items[i]); live = true; }
+      }
+      rafId = live ? requestAnimationFrame(frame) : null;
+    }
+    function run() { if (!rafId && !dead) rafId = requestAnimationFrame(frame); }
+
+    var io = ('IntersectionObserver' in window)
+      ? new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            var item = items.filter(function (it) { return it.el === e.target; })[0];
+            if (!item) return;
+            item.visible = e.isIntersecting;
+            if (e.isIntersecting) run();
+          });
+        }, { rootMargin: '200px 0px' })
+      : null;
+
+    function collect() {
+      var found;
+      try { found = main.querySelectorAll(PICK); }
+      catch (e) { return; }
+
+      [].forEach.call(found, function (el) {
+        if (el.dataset.wrvOn || skipped(el)) return;
+        var html = el.innerHTML;
+        var words = split(el);
+        if (!words) { el.innerHTML = html; return; }
+        el.dataset.wrvOn = '1';
+        if (STYLE === 'fade') el.classList.add('wrv--fade');
+        var item = { el: el, words: words, html: html, visible: false, peak: 0, done: false };
+        items.push(item);
+        if (io) io.observe(el); else { item.visible = true; }
+      });
+
+      items.forEach(paint);
+      if (!io) run();
+    }
+
+    /* this section sits near the top of the page, so most of the headings
+       below it have not been parsed yet when it first runs */
+    collect();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', collect);
+    }
+    window.addEventListener('load', collect);
+
+    /* the theme editor swaps sections in and out as you work */
+    var reCollect = function () { setTimeout(collect, 60); };
+    document.addEventListener('shopify:section:load', reCollect);
+    document.addEventListener('shopify:section:reorder', reCollect);
+    window.addEventListener('resize', function () { items.forEach(paint); });
+
+    function destroy() {
+      dead = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      if (io) io.disconnect();
+      document.removeEventListener('DOMContentLoaded', collect);
+      window.removeEventListener('load', collect);
+      document.removeEventListener('shopify:section:load', reCollect);
+      document.removeEventListener('shopify:section:reorder', reCollect);
+      items.forEach(function (it) {
+        if (it.el.isConnected) {
+          it.el.innerHTML = it.html;
+          it.el.classList.remove('wrv--fade');
+          delete it.el.dataset.wrvOn;
+        }
+      });
+      items = [];
+    }
+
+    window[KEY] = { id: ID, destroy: destroy, refresh: collect, count: function () { return items.length; } };
+
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && ID.indexOf(e.detail.sectionId) !== -1) {
+        destroy();
+        if (window[KEY] && window[KEY].id === ID) window[KEY] = null;
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Word reveal",
+  "tag": "div",
+  "class": "section-word-reveal",
+  "settings": [
+    { "type": "paragraph", "content": "Headings come up word by word as the scroll passes them. Place it once on a template - it does every heading on the page. Headings that run their own animation (the marquee, the word slabs, the scrolling text) are left alone." },
+    { "type": "header", "content": "Which headings" },
+    { "type": "checkbox", "id": "use_h1", "label": "Main headings (H1)", "default": true },
+    { "type": "checkbox", "id": "use_h2", "label": "Section headings (H2)", "default": true },
+    { "type": "checkbox", "id": "use_h3", "label": "Smaller headings (H3)", "default": true },
+    { "type": "checkbox", "id": "use_h4", "label": "Smallest headings (H4)", "default": false },
+    { "type": "text", "id": "extra_selector", "label": "Also these", "info": "CSS selectors, separated by commas. Leave empty unless you know what to put here." },
+    { "type": "text", "id": "skip_selector", "label": "Leave these alone", "info": "CSS selectors, separated by commas." },
+    { "type": "header", "content": "The reveal" },
+    { "type": "select", "id": "style", "label": "How a word arrives", "default": "rise", "options": [
+      { "value": "rise", "label": "Slides up into place" },
+      { "value": "fade", "label": "Fades in" }
+    ], "info": "Sliding keeps every letter solid. Fading leaves the words that have not arrived yet sitting faint on the background." },
+    { "type": "checkbox", "id": "once", "label": "Keep it once it has arrived", "default": true, "info": "Stops headings going faint again when you scroll back up." },
+    { "type": "range", "id": "dim", "label": "How faint a word starts", "min": 0, "max": 60, "step": 5, "unit": "%", "default": 25, "info": "Only used when words fade in." },
+    { "type": "range", "id": "spread", "label": "Words fading at once", "min": 1, "max": 10, "step": 1, "default": 3, "info": "1 snaps word by word, higher is a softer wave." },
+    { "type": "range", "id": "rise", "label": "Lift as it lands", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 0, "info": "Only used when words fade in." },
+    { "type": "header", "content": "When it happens" },
+    { "type": "range", "id": "start_at", "label": "Starts at", "min": 60, "max": 110, "step": 5, "unit": "%", "default": 85, "info": "How far down the screen the heading is when the first word starts." },
+    { "type": "range", "id": "finish_at", "label": "Finishes at", "min": 10, "max": 70, "step": 5, "unit": "%", "default": 45 },
+    { "type": "checkbox", "id": "on_mobile", "label": "On phones too", "default": true }
+  ],
+  "presets": [ { "name": "Word reveal" } ]
+}
+{% endschema %}

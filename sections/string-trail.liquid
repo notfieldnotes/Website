@@ -1,0 +1,561 @@
+{% comment %}
+  String trail - one long line that runs the whole page, from the header down
+  to the footer, with a character hanging off the end of it that travels down
+  the line as you scroll. Extra charms can be pinned anywhere along it.
+
+  It draws itself over the page in a fixed layer that nothing can click, so it
+  sits on top of the section backgrounds without getting in the way.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+  assign charms = section.blocks | where: 'type', 'charm'
+-%}
+
+<div class="rsg" id="rsg-{{ sid }}" aria-hidden="true"
+  data-rsg
+  data-wiggle="{{ s.wiggle }}"
+  data-screens="{{ s.screens }}"
+  data-hug="{{ s.hug_edges }}"
+  data-edge="{{ s.edge_margin }}"
+  data-behind="{{ s.behind_images }}"
+  data-gap="{{ s.gap_limit }}"
+  data-behind-text="{{ s.behind_text }}"
+  data-style="{{ s.line_style }}"
+  data-gauge="{{ s.gauge }}"
+  data-weight="{{ s.weight }}"
+  data-swing="{{ s.swing }}"
+  data-hang="{{ s.hang }}"
+  data-start="{{ s.start_x }}"
+  data-head="{{ s.head_at }}"
+  data-draw="{{ s.draw_on_scroll }}"
+  data-lag="{{ s.lag }}"
+  data-rotate="{{ s.rotate_object }}"
+  data-mobile="{{ s.on_mobile }}"
+  data-mobile-wiggle="{{ s.mobile_wiggle }}">
+
+  <svg class="rsg__svg" data-svg xmlns="http://www.w3.org/2000/svg" fill="none" focusable="false">
+    <defs>
+      <mask id="rsg-mask-{{ sid }}" maskUnits="userSpaceOnUse" data-mask>
+        <rect data-mask-all x="0" y="0" width="100%" height="100%" fill="#fff"></rect>
+        <g data-holes fill="#000"></g>
+      </mask>
+    </defs>
+    <g {% if s.behind_images %}mask="url(#rsg-mask-{{ sid }})"{% endif %}>
+      {%- if s.line_style == 'track' -%}
+        {% comment %} sleepers first, then the rails over them {% endcomment %}
+        <path data-sleepers
+          stroke="{{ s.sleeper_color }}"
+          stroke-width="{{ s.sleeper_length }}"
+          stroke-dasharray="{{ s.sleeper_thickness }} {{ s.sleeper_gap }}"
+          stroke-linecap="butt"></path>
+        <path data-rail-a
+          stroke="{{ s.rail_color }}"
+          stroke-width="{{ s.rail_thickness }}"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
+        <path data-rail-b
+          stroke="{{ s.rail_color }}"
+          stroke-width="{{ s.rail_thickness }}"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
+      {%- endif -%}
+
+      <path data-path
+        stroke="{% if s.line_style == 'track' %}none{% else %}{{ s.color }}{% endif %}"
+        stroke-width="{{ s.thickness }}"
+        stroke-linecap="round"
+        vector-effect="non-scaling-stroke"></path>
+    </g>
+  </svg>
+
+  {%- if s.object_image != blank -%}
+    <div class="rsg__obj" data-obj style="--rsg-ow:{{ s.object_size }}px;">
+      {{ s.object_image | image_url: width: 600 | image_tag:
+        loading: 'lazy', alt: '', class: 'rsg__obj-img', widths: '150,300,600' }}
+    </div>
+  {%- endif -%}
+
+  {%- for b in charms -%}
+    {%- assign c = b.settings -%}
+    {%- if c.image != blank -%}
+      <div class="rsg__charm" data-charm="{{ c.at }}" style="--rsg-cw:{{ c.size }}px;" {{ b.shopify_attributes }}>
+        {{ c.image | image_url: width: 400 | image_tag:
+          loading: 'lazy', alt: '', class: 'rsg__charm-img', widths: '100,200,400' }}
+      </div>
+    {%- endif -%}
+  {%- endfor -%}
+</div>
+
+<style>
+  #rsg-{{ sid }} {
+    position: fixed;
+    inset: 0;
+    z-index: {{ s.layer }};
+    pointer-events: none;
+    overflow: hidden;
+    opacity: {{ s.opacity | divided_by: 100.0 }};
+  }
+  #rsg-{{ sid }} .rsg__svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    overflow: visible;
+  }
+  #rsg-{{ sid }} .rsg__obj,
+  #rsg-{{ sid }} .rsg__charm {
+    position: absolute;
+    left: 0;
+    top: 0;
+    will-change: transform;
+  }
+  #rsg-{{ sid }} .rsg__obj-img {
+    display: block;
+    width: var(--rsg-ow, 90px) !important;
+    height: auto !important;
+    max-width: none !important;
+    {% if s.hang %}transform: translate(-50%, -6%);{% else %}transform: translate(-50%, -50%);{% endif %}
+  }
+  /* the wrapper turns about the point where it meets the string */
+  #rsg-{{ sid }} .rsg__obj { transform-origin: 0 0; }
+  #rsg-{{ sid }} .rsg__charm-img {
+    display: block;
+    width: var(--rsg-cw, 54px) !important;
+    height: auto !important;
+    max-width: none !important;
+    transform: translate(-50%, -50%);
+  }
+
+  @media (max-width: 749px) {
+    #rsg-{{ sid }} .rsg__obj-img { width: {{ s.object_size | times: s.mobile_scale | divided_by: 100 }}px !important; }
+  }
+</style>
+
+<script>
+  (function () {
+    var KEY = '__nfnStringTrail';
+    var ID = 'rsg-{{ sid }}';
+
+    var host = document.getElementById(ID);
+    if (!host) return;
+
+    /* an older copy of this section may still be drawing */
+    if (window[KEY] && window[KEY].id !== ID) window[KEY].destroy();
+
+    var svg = host.querySelector('[data-svg]');
+    var path = host.querySelector('[data-path]');
+    var railA = host.querySelector('[data-rail-a]');
+    var railB = host.querySelector('[data-rail-b]');
+    var sleepers = host.querySelector('[data-sleepers]');
+    var STYLE = host.dataset.style || 'string';
+    var obj = host.querySelector('[data-obj]');
+    var charms = [].slice.call(host.querySelectorAll('[data-charm]'));
+
+    var DRAW = host.dataset.draw === 'true' && (host.dataset.style || 'string') !== 'track';
+    var ROTATE = host.dataset.rotate === 'true';
+    var ON_MOBILE = host.dataset.mobile === 'true';
+    var HEAD_AT = (parseFloat(host.dataset.head) || 55) / 100;
+
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var docH = 0, docW = 0, len = 0;
+    var at = 0, lastT = 0, rafId = null, dead = false;
+    var vel = 0, swing = 0, swingV = 0, lastX = null;
+
+    /* a heavier object takes longer to get going and overshoots further */
+    var W = parseFloat(host.dataset.weight);
+    if (isNaN(W)) W = 5;
+    var STIFF = 0.030 - W * 0.0022;
+    var DAMP = 0.80 + W * 0.015;
+    var SWING = (parseFloat(host.dataset.swing) || 0) * 0.5;
+
+    function narrow() { return window.innerWidth && window.innerWidth < 750; }
+
+    function ease() {
+      var L = parseFloat(host.dataset.lag);
+      if (isNaN(L)) L = 5;
+      if (L <= 0) return 1;
+      return Math.max(0.008, Math.pow(0.62, L));
+    }
+
+    function docHeight() {
+      var b = document.body, e = document.documentElement;
+      return Math.max(b.scrollHeight, b.offsetHeight, e.clientHeight, e.scrollHeight, e.offsetHeight);
+    }
+
+    /* a meander down the page, smoothed through its own points */
+    function build() {
+      /* the preview pane reports a zero viewport while it is hidden - keep the
+         last good measurements rather than banking a broken one */
+      var h = docHeight();
+      var w = window.innerWidth || document.documentElement.clientWidth || 0;
+      if (!h || !w) return false;
+      docH = h;
+      docW = w;
+
+      var amp = (narrow() ? +host.dataset.mobileWiggle : +host.dataset.wiggle) / 100 * docW;
+      var startX = (+host.dataset.start || 50) / 100 * docW;
+
+      /* the curve is measured in screenfuls, not in waves over the whole page:
+         a page three times longer should get three times as many swings, not
+         the same few stretched until they read as a straight diagonal */
+      var vh = window.innerHeight || document.documentElement.clientHeight || 800;
+      var screens = Math.max(0.5, (+host.dataset.screens || 20) / 10);
+      var period = vh * screens;
+      var waves = Math.max(0.35, docH / period);
+
+      /* enough points per swing that the curve stays smooth, not faceted */
+      var steps = Math.max(48, Math.min(600, Math.round(waves * 28)));
+      var hug = host.dataset.hug === 'true';
+      var edge = (+host.dataset.edge || 8) / 100 * docW;
+      var mid = docW / 2;
+      var reach = Math.max(0, mid - edge);
+
+      var pts = [];
+      for (var i = 0; i <= steps; i++) {
+        var t = i / steps;
+        var sv = Math.sin(t * waves * Math.PI * 2);
+        var x;
+        if (hug) {
+          /* push the curve out towards whichever edge it is heading for, so it
+             lingers down the sides and crosses the middle quickly */
+          var shaped = (sv < 0 ? -1 : 1) * Math.pow(Math.abs(sv), 0.38);
+          x = mid + shaped * reach;
+        } else {
+          x = startX + sv * amp;
+        }
+        pts.push([x, t * docH]);
+      }
+
+      var d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+      for (var j = 1; j < pts.length - 1; j++) {
+        var mx = (pts[j][0] + pts[j + 1][0]) / 2;
+        var my = (pts[j][1] + pts[j + 1][1]) / 2;
+        d += ' Q' + pts[j][0].toFixed(1) + ' ' + pts[j][1].toFixed(1) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1);
+      }
+      d += ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + pts[pts.length - 1][1].toFixed(1);
+
+      path.setAttribute('d', d);
+
+      if (STYLE === 'track' && railA && railB) {
+        /* Two rails run parallel to the centre line, offset along its normal.
+           The normals come straight from the points this curve was already
+           built from - asking the browser for them would mean thousands of
+           getPointAtLength calls on every rebuild, which locks the page up. */
+        var half = (parseFloat(host.dataset.gauge) || 18) / 2;
+        var A = [], B = [];
+        for (var q = 0; q < pts.length; q++) {
+          var prev = pts[q > 0 ? q - 1 : 0];
+          var next = pts[q < pts.length - 1 ? q + 1 : pts.length - 1];
+          var tx = next[0] - prev[0], ty = next[1] - prev[1];
+          var m = Math.sqrt(tx * tx + ty * ty) || 1;
+          var nx = -ty / m, ny = tx / m;
+          A.push((pts[q][0] + nx * half).toFixed(1) + ' ' + (pts[q][1] + ny * half).toFixed(1));
+          B.push((pts[q][0] - nx * half).toFixed(1) + ' ' + (pts[q][1] - ny * half).toFixed(1));
+        }
+        railA.setAttribute('d', 'M' + A.join('L'));
+        railB.setAttribute('d', 'M' + B.join('L'));
+        /* a dash is as wide as the stroke, so each one lies across the track */
+        if (sleepers) sleepers.setAttribute('d', d);
+      }
+
+      svg.setAttribute('height', docH);
+      svg.style.height = docH + 'px';
+      if (maskAll) {
+        maskAll.setAttribute('width', docW);
+        maskAll.setAttribute('height', docH);
+      }
+      len = path.getTotalLength();
+
+      if (DRAW) {
+        path.style.strokeDasharray = len;
+      } else {
+        path.style.strokeDasharray = 'none';
+        path.style.strokeDashoffset = '0';
+      }
+
+      /* the pinned charms never move relative to the line */
+      charms.forEach(function (el) {
+        var p = path.getPointAtLength(len * (parseFloat(el.dataset.charm) || 0) / 100);
+        el.dataset.x = p.x;
+        el.dataset.y = p.y;
+      });
+      return true;
+    }
+
+    function target() {
+      var vh = window.innerHeight || 0;
+      var y = window.scrollY || window.pageYOffset || 0;
+      var reach = (y + vh * HEAD_AT) / (docH || 1);
+      return Math.max(0, Math.min(1, reach));
+    }
+
+    var BEHIND = host.dataset.behind === 'true';
+    var BEHIND_TEXT = host.dataset.behindText === 'true';
+    var GAP = parseFloat(host.dataset.gap);
+    if (isNaN(GAP)) GAP = 20;
+    if (GAP <= 0) BEHIND = false;
+    var holesG = host.querySelector('[data-holes]');
+    var maskAll = host.querySelector('[data-mask-all]');
+    var pool = [];
+
+    /* rather than reordering the page, the line is masked out wherever a
+       picture is, so it reads as passing behind it */
+    function updateMask() {
+      if (!BEHIND || !holesG) return;
+      var vh = window.innerHeight, vw = window.innerWidth;
+      if (!vh || !vw) return;
+      var y = window.scrollY || window.pageYOffset || 0;
+      var vpArea = vw * vh;
+
+      var sel = 'main img, main picture, main video, main canvas, main iframe, [data-string-behind]';
+      if (BEHIND_TEXT) {
+        sel += ', main h1, main h2, main h3, main h4, main p, main button, main .btn, main [class*="button"]';
+      }
+      var media = document.querySelectorAll(sel);
+
+      /* A rope you can see end to end reads as one rope. Slipping behind a
+         picture for a moment reads as depth; disappearing for half a screen
+         reads as broken. So only short passes are allowed, and only so many
+         of them, measured against the height of the screen. */
+      var maxGap = GAP / 100 * vh;
+      var budget = maxGap * 1.6;
+
+      var want = [];
+      for (var i = 0; i < media.length; i++) {
+        var el = media[i];
+        var r = el.getBoundingClientRect();
+        if (r.width < 24 || r.height < 24) continue;
+        if (r.bottom < -300 || r.top > vh + 300) continue;
+        /* a full-bleed backdrop would swallow the whole line, so leave it */
+        if (r.width * r.height > vpArea * 0.85) continue;
+        /* how much of the rope this one would swallow */
+        var span = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (span > maxGap) continue;
+        want.push({ r: r, span: span, rad: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0 });
+      }
+
+      /* the shortest passes first, so the budget buys the least noticeable ones */
+      want.sort(function (a, b) { return a.span - b.span; });
+
+      var n = 0, used = 0;
+      for (var j = 0; j < want.length; j++) {
+        if (used + want[j].span > budget) break;
+        used += want[j].span;
+
+        var rr = want[j].r;
+        var rect = pool[n];
+        if (!rect) {
+          rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          holesG.appendChild(rect);
+          pool[n] = rect;
+        }
+        rect.setAttribute('x', rr.left.toFixed(1));
+        rect.setAttribute('y', (rr.top + y).toFixed(1));
+        rect.setAttribute('width', rr.width.toFixed(1));
+        rect.setAttribute('height', rr.height.toFixed(1));
+        rect.setAttribute('rx', Math.min(want[j].rad, rr.width / 2).toFixed(1));
+        rect.setAttribute('display', '');
+        n++;
+      }
+      for (var k = n; k < pool.length; k++) pool[k].setAttribute('display', 'none');
+    }
+
+    function paint(dt) {
+      var vh = window.innerHeight;
+      if (!vh || !len) return;
+
+      var want = target();
+      var f = dt ? Math.min(3, dt * 60) : 0;
+
+      if (!f) {
+        at = want;
+        vel = 0;
+      } else {
+        /* how steep the string is right here: 1 is straight down, 0 is flat.
+           A weight slides fast down the steep runs and dawdles across the
+           shallow ones, the way it would on a real rope. */
+        var hNow = path.getPointAtLength(len * at);
+        var hAhead = path.getPointAtLength(Math.min(len, len * at + 10));
+        var steep = Math.abs(hAhead.y - hNow.y) / 10;
+        var pull = 0.3 + 0.7 * steep;
+
+        vel += (want - at) * STIFF * pull * f;
+        vel *= Math.pow(DAMP, f);
+        at += vel * f;
+
+        if (at < 0) { at = 0; vel = 0; }
+        if (at > 1) { at = 1; vel = 0; }
+      }
+
+      var y = window.scrollY || window.pageYOffset || 0;
+      svg.style.transform = 'translateY(' + (-y) + 'px)';
+
+      var headLen = len * at;
+      if (DRAW) path.style.strokeDashoffset = (len - headLen).toFixed(1);
+
+      if (obj) {
+        var p = path.getPointAtLength(headLen);
+
+        /* it swings behind its own movement and settles, like something
+           hanging off a line rather than pinned to it */
+        if (lastX === null) lastX = p.x;
+        var dx = p.x - lastX;
+        lastX = p.x;
+
+        if (f) {
+          var wantSwing = Math.max(-30, Math.min(30, -dx * SWING));
+          swingV += (wantSwing - swing) * 0.10 * f;
+          swingV *= Math.pow(0.45, f);
+          swing += swingV * f;
+          /* a hard stop, so a fast run can never tip it past leaning over */
+          if (swing > 35) { swing = 35; if (swingV > 0) swingV = 0; }
+          if (swing < -35) { swing = -35; if (swingV < 0) swingV = 0; }
+        }
+
+        var turn = swing;
+        if (ROTATE) {
+          var p2 = path.getPointAtLength(Math.min(len, headLen + 2));
+          /* the artwork is drawn pointing right, so it turns to face the way
+             it is travelling - straight down on a vertical track */
+          turn += Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+        }
+
+        obj.style.transform =
+          'translate3d(' + p.x.toFixed(1) + 'px,' + (p.y - y).toFixed(1) + 'px,0) rotate(' + turn.toFixed(2) + 'deg)';
+      }
+
+      charms.forEach(function (el) {
+        el.style.transform = 'translate3d(' + (+el.dataset.x).toFixed(1) + 'px,' + (+el.dataset.y - y).toFixed(1) + 'px,0)';
+      });
+
+      updateMask();
+    }
+
+    function frame(t) {
+      if (dead || !host.isConnected) { stop(); return; }
+      if (!lastT) lastT = t;
+      var dt = Math.min(64, t - lastT) / 1000;
+      lastT = t;
+      paint(dt);
+      rafId = requestAnimationFrame(frame);
+    }
+    function run() { if (!rafId && !dead) { lastT = 0; rafId = requestAnimationFrame(frame); } }
+    function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+
+    function refresh() {
+      var was = docH;
+      build();
+      if (was !== docH) { at = target(); }
+      paint(0);
+    }
+
+    if (!ON_MOBILE && narrow()) { host.style.display = 'none'; return; }
+
+    build();
+    at = target();
+    paint(0);
+
+    if (reduced) {
+      /* no travelling, just the finished line */
+      at = 1;
+      if (DRAW) path.style.strokeDashoffset = '0';
+      paint(0);
+    } else {
+      run();
+    }
+
+    window.addEventListener('resize', refresh);
+    window.addEventListener('load', refresh);
+    /* images and lazy sections keep changing how tall the page is */
+    var tick = setInterval(function () {
+      if (dead) { clearInterval(tick); return; }
+      if (!len || Math.abs(docHeight() - docH) > 40) refresh();
+    }, 2000);
+
+    function destroy() {
+      dead = true;
+      stop();
+      clearInterval(tick);
+      window.removeEventListener('resize', refresh);
+      window.removeEventListener('load', refresh);
+    }
+
+    window[KEY] = { id: ID, destroy: destroy, refresh: refresh };
+
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && ID.indexOf(e.detail.sectionId) !== -1) {
+        destroy();
+        if (window[KEY] && window[KEY].id === ID) window[KEY] = null;
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "String trail",
+  "tag": "div",
+  "class": "section-string-trail",
+  "settings": [
+    { "type": "paragraph", "content": "One long line down the whole page with a character travelling along it as you scroll. Place it once on a template - it runs from the top of the page to the bottom." },
+    { "type": "select", "id": "line_style", "label": "What runs down the page", "default": "string", "options": [
+      { "value": "string", "label": "A string" },
+      { "value": "track", "label": "A railway track" }
+    ] },
+    { "type": "header", "content": "The string" },
+    { "type": "color", "id": "color", "label": "Colour", "default": "#c95931" },
+    { "type": "range", "id": "thickness", "label": "Thickness", "min": 1, "max": 10, "step": 1, "unit": "px", "default": 2 },
+    { "type": "range", "id": "opacity", "label": "Strength", "min": 10, "max": 100, "step": 5, "unit": "%", "default": 100 },
+    { "type": "range", "id": "start_x", "label": "Runs down at", "min": 0, "max": 100, "step": 2, "unit": "%", "default": 12, "info": "Across the screen. 0 is the left edge." },
+    { "type": "range", "id": "wiggle", "label": "How far it swings", "min": 0, "max": 80, "step": 5, "unit": "%", "default": 35, "info": "Across the screen. This is what makes it read as a curve rather than a diagonal." },
+    { "type": "range", "id": "screens", "label": "One curve every", "min": 5, "max": 60, "step": 5, "unit": "x", "default": 20, "info": "In tenths of a screen: 20 means one full S-curve every two screenfuls. Lower is curlier." },
+    { "type": "checkbox", "id": "hug_edges", "label": "Keep it to the sides", "default": true, "info": "The line lingers down the left and right edges and crosses the middle quickly, instead of weaving through the content." },
+    { "type": "range", "id": "edge_margin", "label": "How close to the edge", "min": 0, "max": 30, "step": 2, "unit": "%", "default": 8 },
+    { "type": "checkbox", "id": "behind_images", "label": "Pass behind pictures", "default": true, "info": "The line slips behind a photo rather than running over it. Full-screen backdrops are always ignored." },
+    { "type": "checkbox", "id": "behind_text", "label": "Pass behind writing too", "default": true, "info": "Keeps it in the background of a section rather than running across headings and buttons." },
+    { "type": "range", "id": "gap_limit", "label": "Longest it may disappear for", "min": 0, "max": 60, "step": 5, "unit": "%", "default": 20, "info": "Of the screen height. A picture taller than this is passed over instead of behind, so the rope never breaks into pieces. 0 keeps it unbroken everywhere." },
+    { "type": "checkbox", "id": "draw_on_scroll", "label": "Draw it as you scroll", "default": false, "info": "Off leaves the whole string attached down the page, with only the object travelling - the way the reference works." },
+    { "type": "header", "content": "The railway track" },
+    { "type": "paragraph", "content": "Only used when the track is chosen above." },
+    { "type": "color", "id": "rail_color", "label": "Rails", "default": "#9aa1ab" },
+    { "type": "range", "id": "rail_thickness", "label": "Rail thickness", "min": 1, "max": 8, "step": 1, "unit": "px", "default": 2 },
+    { "type": "range", "id": "gauge", "label": "Width between the rails", "min": 6, "max": 60, "step": 2, "unit": "px", "default": 20 },
+    { "type": "color", "id": "sleeper_color", "label": "Sleepers", "default": "#6b4a2f" },
+    { "type": "range", "id": "sleeper_length", "label": "Sleeper length", "min": 8, "max": 80, "step": 2, "unit": "px", "default": 32 },
+    { "type": "range", "id": "sleeper_thickness", "label": "Sleeper thickness", "min": 1, "max": 12, "step": 1, "unit": "px", "default": 4 },
+    { "type": "range", "id": "sleeper_gap", "label": "Gap between sleepers", "min": 4, "max": 60, "step": 2, "unit": "px", "default": 16 },
+    { "type": "header", "content": "The object on the end" },
+    { "type": "image_picker", "id": "object_image", "label": "Object", "info": "A cut-out PNG works best. On a track this is your train - point it to the right and turn on \"Turn it to follow\" so it sits along the rails." },
+    { "type": "range", "id": "object_size", "label": "Size", "min": 20, "max": 240, "step": 10, "unit": "px", "default": 90 },
+    { "type": "checkbox", "id": "rotate_object", "label": "Turn it to follow the line", "default": false, "info": "Draw the object pointing to the right and it will turn to face the way it is travelling." },
+    { "type": "range", "id": "head_at", "label": "Rides at", "min": 20, "max": 90, "step": 5, "unit": "%", "default": 55, "info": "How far down the screen the object sits." },
+    { "type": "checkbox", "id": "hang", "label": "Hangs from the string", "default": true, "info": "Off sits it on the line instead." },
+    { "type": "range", "id": "weight", "label": "How heavy it is", "min": 0, "max": 10, "step": 1, "default": 5, "info": "Heavier takes longer to get going, runs on further and settles with a wobble." },
+    { "type": "range", "id": "swing", "label": "How much it swings", "min": 0, "max": 10, "step": 1, "default": 5, "info": "It leans back as it picks up speed and rights itself as it slows." },
+    { "type": "range", "id": "lag", "label": "How loosely it follows", "min": 0, "max": 10, "step": 1, "default": 5 },
+    { "type": "header", "content": "Layering" },
+    { "type": "range", "id": "layer", "label": "Sits above", "min": 0, "max": 20, "step": 1, "default": 5, "info": "Raise it if a section covers the string, lower it if the string covers something it should not." },
+    { "type": "header", "content": "On phones" },
+    { "type": "checkbox", "id": "on_mobile", "label": "Show on phones", "default": true },
+    { "type": "range", "id": "mobile_wiggle", "label": "How far it swings on phones", "min": 0, "max": 80, "step": 5, "unit": "%", "default": 25 },
+    { "type": "range", "id": "mobile_scale", "label": "Object size on phones", "min": 40, "max": 120, "step": 10, "unit": "%", "default": 70 }
+  ],
+  "blocks": [
+    {
+      "type": "charm",
+      "name": "Charm",
+      "settings": [
+        { "type": "paragraph", "content": "A small drawing pinned to a spot on the string. It stays where you put it." },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "range", "id": "at", "label": "How far down the string", "min": 0, "max": 100, "step": 2, "unit": "%", "default": 30 },
+        { "type": "range", "id": "size", "label": "Size", "min": 16, "max": 160, "step": 8, "unit": "px", "default": 56 }
+      ]
+    }
+  ],
+  "max_blocks": 10,
+  "presets": [ { "name": "String trail" } ]
+}
+{% endschema %}

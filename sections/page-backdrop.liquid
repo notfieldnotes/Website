@@ -1,0 +1,155 @@
+{% comment %}
+  Page backdrop - one image sitting behind every section of the page, set once
+  here. It also squares off the page's section corners and can make the
+  sections see-through so the image reads all the way down.
+
+  The rules below are written in a plain style tag on purpose: the theme's
+  stylesheet compiler rewrites some of them. They only load on pages where
+  this section is placed.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+-%}
+
+<div class="pbd" id="pbd-{{ sid }}" aria-hidden="true"></div>
+
+<style>
+  #MainContent {
+    {%- if s.image != blank %}
+    background-image: url({{ s.image | image_url: width: 2400 }});
+    {%- endif %}
+    background-color: {{ s.fallback_color }};
+    background-size: {{ s.image_fit }};
+    background-position: {{ s.image_position }};
+    background-repeat: {% if s.image_fit == 'auto' %}repeat{% else %}no-repeat{% endif %};
+    background-attachment: {% if s.image_fixed %}fixed{% else %}scroll{% endif %};
+  }
+
+  .pbd { display: block; height: 0; }
+
+  {%- if s.square_corners %}
+  /* the theme rounds the first child of every section; not on this page */
+  #MainContent > .shopify-section > :first-child,
+  #MainContent > .shopify-section {
+    border-radius: 0 !important;
+  }
+  {%- endif %}
+
+  {%- if s.see_through %}
+  #MainContent .plb,
+  #MainContent .ifc,
+  #MainContent .fqp {
+    background-color: transparent !important;
+  }
+  #MainContent .plb__bg,
+  #MainContent .ifc__bg,
+  #MainContent .fqp__bg {
+    display: none !important;
+  }
+  {%- endif %}
+
+  {%- if s.tint_opacity > 0 %}
+  #MainContent::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: {{ s.tint_color }};
+    opacity: {{ s.tint_opacity | divided_by: 100.0 }};
+  }
+  #MainContent > .shopify-section { position: relative; z-index: 1; }
+  {%- endif %}
+</style>
+
+{%- liquid
+  assign dividers = section.blocks | where: 'type', 'shape_divider'
+  for divider in dividers
+    render 'block-shape-divider', block: divider
+  endfor
+-%}
+
+{% schema %}
+{
+  "name": "Page backdrop",
+  "tag": "section",
+  "class": "section-page-backdrop",
+  "settings": [
+    { "type": "paragraph", "content": "Place this once anywhere on the page. The image sits behind every section of the page." },
+    { "type": "image_picker", "id": "image", "label": "Background image" },
+    { "type": "select", "id": "image_fit", "label": "How the image sits", "default": "cover", "options": [
+      { "value": "cover", "label": "Fill the page" },
+      { "value": "contain", "label": "Fit inside" },
+      { "value": "auto", "label": "Tile it" },
+      { "value": "100% auto", "label": "Full width" }
+    ] },
+    { "type": "select", "id": "image_position", "label": "Where it sits", "default": "center center", "options": [
+      { "value": "center center", "label": "Middle" },
+      { "value": "center top", "label": "Top" },
+      { "value": "center bottom", "label": "Bottom" }
+    ] },
+    { "type": "checkbox", "id": "image_fixed", "label": "Hold the image still while scrolling", "default": true },
+    { "type": "color", "id": "fallback_color", "label": "Colour behind the image", "default": "#524e97" },
+    { "type": "header", "content": "The sections on this page" },
+    { "type": "checkbox", "id": "square_corners", "label": "Square corners", "default": true, "info": "Turns off the rounded section corners on this page." },
+    { "type": "checkbox", "id": "see_through", "label": "Let the image show through the sections", "default": true, "info": "Clears the background colour of the plan, info-card and FAQ sections on this page." },
+    { "type": "header", "content": "Tint" },
+    { "type": "color", "id": "tint_color", "label": "Tint over the image", "default": "#524e97" },
+    { "type": "range", "id": "tint_opacity", "label": "Tint strength", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 0 }
+  ],
+  "blocks": [
+    {
+      "name": "t:common.blocks.shape_divider.name",
+      "type": "shape_divider",
+      "limit": 2,
+      "settings": [
+        { "type": "select", "label": "t:common.blocks.shape_divider.settings.target_section.label", "id": "target_section", "default": "above", "options": [
+          { "value": "above", "label": "t:common.blocks.shape_divider.settings.target_section.options.section_above.label" },
+          { "value": "below", "label": "t:common.blocks.shape_divider.settings.target_section.options.section_below.label" }
+        ], "info": "t:common.blocks.shape_divider.settings.target_section.info" },
+        { "type": "color_scheme", "id": "target_section_color_scheme", "default": "scheme1", "label": "t:common.blocks.shape_divider.settings.target_section_color_scheme.label", "info": "t:common.blocks.shape_divider.settings.target_section_color_scheme.info" },
+        { "type": "select", "label": "t:common.blocks.shape_divider.settings.style.label", "id": "style", "default": "waves-1-patterned_1200x20", "options": [
+          { "value": "waves-1-patterned_1200x20", "label": "t:common.blocks.shape_divider.settings.style.options.waves_1.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "waves-2-patterned_1200x43", "label": "t:common.blocks.shape_divider.settings.style.options.waves_2.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "waves-3-patterned_1200x84", "label": "t:common.blocks.shape_divider.settings.style.options.waves_3.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "zig-zag-1-patterned_1200x21", "label": "t:common.blocks.shape_divider.settings.style.options.zig_zag_1.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "zig-zag-2-patterned_1200x37", "label": "t:common.blocks.shape_divider.settings.style.options.zig_zag_2.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "zig-zag-3-patterned_1200x65", "label": "t:common.blocks.shape_divider.settings.style.options.zig_zag_3.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "circles-1-patterned_1200x16", "label": "t:common.blocks.shape_divider.settings.style.options.circles_1.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "circles-2-patterned_1200x35", "label": "t:common.blocks.shape_divider.settings.style.options.circles_2.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "circles-3-patterned_1200x67", "label": "t:common.blocks.shape_divider.settings.style.options.circles_3.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "spikes-1-patterned_1200x132", "label": "t:common.blocks.shape_divider.settings.style.options.spikes_1.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "spikes-2-patterned_1200x132", "label": "t:common.blocks.shape_divider.settings.style.options.spikes_2.label", "group": "t:common.blocks.shape_divider.settings.style.group_patterned" },
+          { "value": "tilt-1-shape_1440x101", "label": "t:common.blocks.shape_divider.settings.style.options.tilt_1.label", "group": "t:common.settings.shape.label" },
+          { "value": "tilt-2-shape_1440x180", "label": "t:common.blocks.shape_divider.settings.style.options.tilt_2.label", "group": "t:common.settings.shape.label" },
+          { "value": "tilt-3-shape_1440x293", "label": "t:common.blocks.shape_divider.settings.style.options.tilt_3.label", "group": "t:common.settings.shape.label" },
+          { "value": "waves-1-shape_1440x261", "label": "t:common.blocks.shape_divider.settings.style.options.waves_1.label", "group": "t:common.settings.shape.label" },
+          { "value": "waves-2-shape_1440x330", "label": "t:common.blocks.shape_divider.settings.style.options.waves_2.label", "group": "t:common.settings.shape.label" },
+          { "value": "mountains-1-shape_1440x293", "label": "t:common.blocks.shape_divider.settings.style.options.mountains_1.label", "group": "t:common.settings.shape.label" },
+          { "value": "mountains-2-shape_1440x325", "label": "t:common.blocks.shape_divider.settings.style.options.mountains_2.label", "group": "t:common.settings.shape.label" },
+          { "value": "curve-shape_1440x149", "label": "t:common.blocks.shape_divider.settings.style.options.curve.label", "group": "t:common.settings.shape.label" },
+          { "value": "curve-inverse-shape_1440x149", "label": "t:common.blocks.shape_divider.settings.style.options.curve_inverse.label", "group": "t:common.settings.shape.label" },
+          { "value": "steps-1-shape_1400x105", "label": "t:common.blocks.shape_divider.settings.style.options.steps_1.label", "group": "t:common.settings.shape.label" },
+          { "value": "steps-2-shape_1400x105", "label": "t:common.blocks.shape_divider.settings.style.options.steps_2.label", "group": "t:common.settings.shape.label" },
+          { "value": "arrow-1-shape_1400x33", "label": "t:common.blocks.shape_divider.settings.style.options.arrow_1.label", "group": "t:common.settings.shape.label" },
+          { "value": "arrow-2-shape_1400x73", "label": "t:common.blocks.shape_divider.settings.style.options.arrow_2.label", "group": "t:common.settings.shape.label" },
+          { "value": "offset-ovals-shape_1400x155", "label": "t:common.blocks.shape_divider.settings.style.options.offset_ovals.label", "group": "t:common.settings.shape.label" },
+          { "value": "triangle-shape_1400x145", "label": "t:common.blocks.shape_divider.settings.style.options.triangle.label", "group": "t:common.settings.shape.label" },
+          { "value": "triangle-asymmetrical-shape_1400x145", "label": "t:common.blocks.shape_divider.settings.style.options.triangle_asymmetrical.label", "group": "t:common.settings.shape.label" },
+          { "value": "clouds-shape_1400x161", "label": "t:common.blocks.shape_divider.settings.style.options.clouds.label", "group": "t:common.settings.shape.label" }
+        ] },
+        { "type": "checkbox", "id": "flip_horizontal", "label": "t:common.blocks.shape_divider.settings.flip_horizontal.label" },
+        { "type": "header", "content": "t:common.settings.header_animation" },
+        { "type": "checkbox", "id": "enable_animation", "label": "t:common.blocks.shape_divider.settings.enable_animation.label", "info": "t:common.blocks.shape_divider.settings.enable_animation.info" },
+        { "type": "select", "id": "animation_direction", "label": "t:common.blocks.shape_divider.settings.animation_direction.label", "default": "", "options": [
+          { "value": "", "label": "t:common.options.right_to_left.label" },
+          { "value": "reverse", "label": "t:common.options.left_to_right.label" }
+        ] }
+      ]
+    }
+  ],
+  "presets": [ { "name": "Page backdrop" } ]
+}
+{% endschema %}

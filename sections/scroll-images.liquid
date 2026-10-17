@@ -1,0 +1,359 @@
+{% comment %}
+  Scroll images - the mosaic from cvnt.in. Square tiles sit scattered across a
+  grid, each one growing from nothing as it rises into the screen, holding at
+  full size while it crosses the middle, then shrinking away as it leaves.
+
+  Each tile is a block, and you pick the column it sits in - leaving columns
+  empty is what gives the scattered look.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+  assign tiles = section.blocks
+
+  case s.shape
+    when 'square'
+      assign ratio = '1 / 1'
+    when 'portrait'
+      assign ratio = '4 / 5'
+    when 'tall'
+      assign ratio = '3 / 4'
+    when 'landscape'
+      assign ratio = '3 / 2'
+  endcase
+-%}
+
+<section class="spx" id="spx-{{ sid }}"
+  data-spx
+  data-enter="{{ s.enter_at }}"
+  data-full="{{ s.full_at }}"
+  data-until="{{ s.until_at }}"
+  data-start="{{ s.start_scale }}"
+  data-fade="{{ s.fade_with_it }}"
+  data-smooth="{{ s.smoothing }}">
+
+  {%- if s.background_image != blank -%}
+    <div class="spx__bg" aria-hidden="true"
+      style="background-image:url({{ s.background_image | image_url: width: 2400 }});"></div>
+  {%- endif -%}
+
+  {%- if s.line_one != blank or s.line_two != blank or s.sub_line != blank -%}
+    <div class="spx__words">
+      {%- if s.line_one != blank -%}<p class="spx__one">{{ s.line_one }}</p>{%- endif -%}
+      {%- if s.line_two != blank -%}<p class="spx__two">{{ s.line_two }}</p>{%- endif -%}
+      {%- if s.sub_line != blank -%}<p class="spx__sub">{{ s.sub_line }}</p>{%- endif -%}
+    </div>
+  {%- endif -%}
+
+  <div class="spx__grid">
+    {%- for b in tiles -%}
+      {%- assign t = b.settings -%}
+      <div class="spx__cell" style="grid-column:{{ t.column }} / span {{ t.span }};" {{ b.shopify_attributes }}>
+        <div class="spx__tile" data-tile>
+          {%- if t.link != blank -%}<a class="spx__link" href="{{ t.link }}">{%- endif -%}
+            <div class="spx__frame">
+              {%- if t.image != blank -%}
+                {{ t.image | image_url: width: 1200 | image_tag:
+                  loading: 'lazy',
+                  alt: t.alt,
+                  class: 'spx__img',
+                  widths: '200,400,600,900,1200' }}
+              {%- else -%}
+                <div class="spx__blank"></div>
+              {%- endif -%}
+            </div>
+            {%- if t.name != blank or t.place != blank -%}
+              <div class="spx__cap">
+                <span>{{ t.name }}</span>
+                <span>{{ t.place }}</span>
+              </div>
+            {%- endif -%}
+          {%- if t.link != blank -%}</a>{%- endif -%}
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+
+<style>
+  #spx-{{ sid }} {
+    background: {{ s.background_color }};
+    color: {{ s.text_color }};
+    padding: {{ s.padding_top }}px {{ s.side_padding }}px {{ s.padding_bottom }}px;
+    overflow: hidden;
+  }
+  /* the words sit still in the middle while the pictures pass over them */
+  #spx-{{ sid }} { position: relative; }
+  #spx-{{ sid }} .spx__words {
+    position: sticky;
+    top: 50%;
+    z-index: 0;
+    transform: translateY(-50%);
+    height: 0;
+    text-align: center;
+    color: {{ s.text_color }};
+    pointer-events: none;
+  }
+  #spx-{{ sid }} .spx__one {
+    margin: 0;
+    font-family: var(--main-font-stack);
+    font-style: italic;
+    font-weight: 400;
+    line-height: .95;
+    font-size: clamp(1.6rem, {{ s.words_size }}vw, 7rem);
+  }
+  #spx-{{ sid }} .spx__two {
+    margin: 0;
+    font-family: var(--heading-font-stack);
+    font-weight: 900;
+    line-height: .95;
+    letter-spacing: -0.02em;
+    font-size: clamp(1.8rem, {{ s.words_size | plus: 1 }}vw, 8rem);
+  }
+  #spx-{{ sid }} .spx__sub {
+    margin: .6em 0 0;
+    opacity: .55;
+    font-size: clamp(.85rem, 1.4vw, 1.3rem);
+  }
+
+  #spx-{{ sid }} .spx__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-size: {{ s.background_fit }};
+    background-position: {{ s.background_position }};
+    background-repeat: {% if s.background_fit == 'auto' %}repeat{% else %}no-repeat{% endif %};
+    background-attachment: {% if s.background_fixed %}fixed{% else %}scroll{% endif %};
+    opacity: {{ s.background_image_opacity | divided_by: 100.0 }};
+    pointer-events: none;
+  }
+
+  #spx-{{ sid }} .spx__grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat({{ s.columns }}, 1fr);
+    gap: {{ s.gap }}px;
+    max-width: {{ s.max_width }}px;
+    margin: 0 auto;
+  }
+  #spx-{{ sid }} .spx__frame { aspect-ratio: {{ ratio }}; overflow: hidden; border-radius: {{ s.corner_radius }}px; }
+  #spx-{{ sid }} .spx__cap {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-top: .5em;
+    color: {{ s.caption_color }};
+    font-size: {{ s.caption_size }}px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  /* the tile is what grows - the cell keeps its place in the grid */
+  #spx-{{ sid }} .spx__tile {
+    width: 100%;
+    transform: scale(0);
+    transform-origin: center;
+    will-change: transform;
+  }
+  #spx-{{ sid }} .spx__link { display: block; width: 100%; text-decoration: none; color: inherit; }
+  #spx-{{ sid }} .spx__img {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    max-width: none !important;
+  }
+  #spx-{{ sid }} .spx__blank {
+    width: 100%;
+    height: 100%;
+    background: {{ s.placeholder_color }};
+  }
+
+  @media (max-width: 749px) {
+    #spx-{{ sid }} .spx__grid { grid-template-columns: repeat({{ s.mobile_columns }}, 1fr); }
+    /* the hand-picked columns do not survive a narrower grid, so let it flow */
+    #spx-{{ sid }} .spx__cell { grid-column: auto / span 1 !important; }
+    #spx-{{ sid }} .spx__cap { font-size: {{ s.caption_size | minus: 1 }}px; letter-spacing: .06em; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #spx-{{ sid }} .spx__tile { transform: scale(1) !important; opacity: 1 !important; }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('spx-{{ sid }}');
+    if (!host) return;
+
+    var tiles = [].slice.call(host.querySelectorAll('[data-tile]'));
+    if (!tiles.length) return;
+
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) { tiles.forEach(function (t) { t.style.transform = 'scale(1)'; }); return; }
+
+    var ENTER = (+host.dataset.enter || 110) / 100;
+    var FULL = (+host.dataset.full || 60) / 100;
+    var UNTIL = (+host.dataset.until || 25) / 100;
+    var START = (+host.dataset.start || 0) / 100;
+    var FADE = host.dataset.fade === 'true';
+
+    var SMOOTH = +host.dataset.smooth;
+    if (isNaN(SMOOTH)) SMOOTH = 5;
+    var EASE_K = SMOOTH <= 0 ? 1 : Math.max(0.05, Math.pow(0.78, SMOOTH));
+
+    var rafId = null;
+    var at = [];
+    var lastT = 0;
+
+    function ease(x) { return x * x * (3 - 2 * x); }
+
+    function want(i, vh) {
+      var r = tiles[i].parentElement.getBoundingClientRect();
+      var p = (r.top + r.height / 2) / vh;   /* 1 = bottom of screen, 0 = top */
+      if (p >= ENTER || p <= 0) return 0;
+      if (p > FULL) return ease((ENTER - p) / (ENTER - FULL));
+      if (p > UNTIL) return 1;               /* holds full across the middle */
+      return ease(p / UNTIL);                /* shrinking away at the top */
+    }
+
+    function paint(dt) {
+      var vh = window.innerHeight;
+      if (!vh) return;
+
+      /* each tile chases its target rather than snapping to it, so a jumpy
+         scroll still reads as a smooth grow */
+      var a = dt ? 1 - Math.pow(1 - EASE_K, dt * 60) : 1;
+
+      for (var i = 0; i < tiles.length; i++) {
+        var k = want(i, vh);
+        if (at[i] === undefined) at[i] = k;
+        var d = k - at[i];
+        if (Math.abs(d) < 0.0015) at[i] = k; else at[i] += d * a;
+
+        var scale = START + (1 - START) * at[i];
+        tiles[i].style.transform = 'scale(' + scale.toFixed(4) + ')';
+        if (FADE) tiles[i].style.opacity = at[i].toFixed(3);
+      }
+    }
+
+    function frame(t) {
+      if (!host.isConnected) { stop(); return; }
+      if (!lastT) lastT = t;
+      var dt = Math.min(64, t - lastT) / 1000;
+      lastT = t;
+      paint(dt);
+      rafId = requestAnimationFrame(frame);
+    }
+    function run() { if (!rafId) { lastT = 0; rafId = requestAnimationFrame(frame); } }
+    function stop() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (e) {
+        if (e[0].isIntersecting) run(); else stop();
+      }, { rootMargin: '200px 0px' }).observe(host);
+    } else {
+      run();
+    }
+
+    paint(0);
+    window.addEventListener('resize', function () { paint(0); });
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && '{{ sid }}'.indexOf(e.detail.sectionId) !== -1) stop();
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Scroll images",
+  "tag": "section",
+  "class": "section-scroll-images",
+  "settings": [
+    { "type": "paragraph", "content": "Tiles grow in as they rise up the screen, hold at full size across the middle, then shrink away at the top. Add a block per picture and pick which column it sits in - the empty columns are what make it scatter." },
+    { "type": "header", "content": "Words in the middle" },
+    { "type": "paragraph", "content": "These sit still in the centre of the screen while the pictures travel over them." },
+    { "type": "text", "id": "line_one", "label": "First line", "info": "Shown in italics." },
+    { "type": "text", "id": "line_two", "label": "Second line", "info": "Shown heavy." },
+    { "type": "text", "id": "sub_line", "label": "Line underneath" },
+    { "type": "range", "id": "words_size", "label": "Size of the words", "min": 2, "max": 10, "step": 1, "unit": "vw", "default": 5 },
+    { "type": "header", "content": "The grid" },
+    { "type": "range", "id": "columns", "label": "Columns", "min": 2, "max": 10, "step": 1, "default": 6, "info": "More columns makes every picture smaller." },
+    { "type": "range", "id": "mobile_columns", "label": "Columns on phones", "min": 1, "max": 3, "step": 1, "default": 2 },
+    { "type": "range", "id": "gap", "label": "Gap between tiles", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 0 },
+    { "type": "range", "id": "max_width", "label": "Widest it gets", "min": 600, "max": 1900, "step": 20, "unit": "px", "default": 1500 },
+    { "type": "select", "id": "shape", "label": "Tile shape", "default": "square", "options": [
+      { "value": "square", "label": "Square" },
+      { "value": "portrait", "label": "Portrait (4:5)" },
+      { "value": "tall", "label": "Tall (3:4)" },
+      { "value": "landscape", "label": "Landscape (3:2)" }
+    ] },
+    { "type": "range", "id": "corner_radius", "label": "Corners", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 0 },
+    { "type": "header", "content": "How it moves" },
+    { "type": "range", "id": "enter_at", "label": "Starts growing at", "min": 70, "max": 140, "step": 5, "unit": "%", "default": 110, "info": "How far down the screen a tile is when it begins. 100% is the bottom edge." },
+    { "type": "range", "id": "full_at", "label": "Reaches full size at", "min": 40, "max": 95, "step": 5, "unit": "%", "default": 60 },
+    { "type": "range", "id": "until_at", "label": "Starts shrinking at", "min": 5, "max": 45, "step": 5, "unit": "%", "default": 35, "info": "It is gone by the time it reaches the top." },
+    { "type": "range", "id": "start_scale", "label": "Smallest it gets", "min": 0, "max": 60, "step": 5, "unit": "%", "default": 0 },
+    { "type": "checkbox", "id": "fade_with_it", "label": "Fade as well as shrink", "default": false },
+    { "type": "range", "id": "smoothing", "label": "Smoothness", "min": 0, "max": 10, "step": 1, "default": 5, "info": "0 locks each picture to the scroll. Higher lets it ease into its size, which rides out a jumpy scroll." },
+    { "type": "header", "content": "Look" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#f1e9d4" },
+    { "type": "image_picker", "id": "background_image", "label": "Background picture" },
+    { "type": "select", "id": "background_fit", "label": "How the picture sits", "default": "cover", "options": [
+      { "value": "cover", "label": "Fill the section" },
+      { "value": "contain", "label": "Fit inside" },
+      { "value": "auto", "label": "Tile it" },
+      { "value": "100% auto", "label": "Full width" }
+    ] },
+    { "type": "select", "id": "background_position", "label": "Where it sits", "default": "center", "options": [
+      { "value": "center", "label": "Middle" },
+      { "value": "center top", "label": "Top" },
+      { "value": "center bottom", "label": "Bottom" },
+      { "value": "left center", "label": "Left" },
+      { "value": "right center", "label": "Right" }
+    ] },
+    { "type": "range", "id": "background_image_opacity", "label": "Picture strength", "min": 5, "max": 100, "step": 5, "unit": "%", "default": 100 },
+    { "type": "checkbox", "id": "background_fixed", "label": "Hold the picture still while scrolling", "default": false },
+    { "type": "color", "id": "text_color", "label": "Heading", "default": "#28183c" },
+    { "type": "color", "id": "placeholder_color", "label": "Empty tile", "default": "#c95931", "info": "Shown on a block with no picture yet." },
+    { "type": "color", "id": "caption_color", "label": "Captions", "default": "#8b8398" },
+    { "type": "range", "id": "caption_size", "label": "Caption size", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "padding_top", "label": "Space above", "min": 0, "max": 200, "step": 10, "unit": "px", "default": 80 },
+    { "type": "range", "id": "padding_bottom", "label": "Space below", "min": 0, "max": 200, "step": 10, "unit": "px", "default": 80 },
+    { "type": "range", "id": "side_padding", "label": "Space at the sides", "min": 0, "max": 100, "step": 5, "unit": "px", "default": 20 }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "Picture",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Picture" },
+        { "type": "range", "id": "column", "label": "Column", "min": 1, "max": 10, "step": 1, "default": 1, "info": "Which column it starts in. Tiles share a row when they do not overlap." },
+        { "type": "range", "id": "span", "label": "How wide", "min": 1, "max": 4, "step": 1, "default": 1, "info": "In columns. Mix 1s and 2s so the pictures are not all the same size." },
+        { "type": "text", "id": "name", "label": "Caption, left" },
+        { "type": "text", "id": "place", "label": "Caption, right", "info": "The reference puts the city here, in brackets." },
+        { "type": "url", "id": "link", "label": "Links to" },
+        { "type": "text", "id": "alt", "label": "Describe the picture" }
+      ]
+    }
+  ],
+  "max_blocks": 30,
+  "presets": [
+    {
+      "name": "Scroll images",
+      "blocks": [
+        { "type": "tile", "settings": { "column": 1, "span": 1 } },
+        { "type": "tile", "settings": { "column": 4, "span": 2 } },
+        { "type": "tile", "settings": { "column": 2, "span": 2 } },
+        { "type": "tile", "settings": { "column": 6, "span": 1 } },
+        { "type": "tile", "settings": { "column": 1, "span": 2 } },
+        { "type": "tile", "settings": { "column": 5, "span": 1 } },
+        { "type": "tile", "settings": { "column": 3, "span": 1 } },
+        { "type": "tile", "settings": { "column": 5, "span": 2 } }
+      ]
+    }
+  ]
+}
+{% endschema %}

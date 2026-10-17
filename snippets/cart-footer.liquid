@@ -1,0 +1,106 @@
+<data-island
+  x-data="CartFooter"
+  data-cart-footer
+  on="idle"
+>
+  {% if cart != empty %}
+    <div class="border-t-section border-scheme-text {% if template == 'cart' %}pt-5 lg:pt-10{% else %} pt-2.5 lg:pt-5 {% endif %}">
+      <div class="grid grid-cols-14 gap-2  {% if template == 'cart' %} max-w-5xl mx-auto {% endif %}">
+        {% if template == 'cart' and settings.cart_notes_enable %}
+          <div class="col-span-14 md:col-span-6 md:row-span-3">
+            <label class="block text-sm" for="CartSpecialInstructions">
+              {{- 'cart.general.note' | t -}}
+            </label>
+            <data-island class="contents" x-data="CartNote">
+              <textarea
+                name="note"
+                id="CartSpecialInstructions"
+                class="input mb-2 mt-2.5 block w-full p-2 transition-opacity"
+                :class="{ 'opacity-50 cursor-progress' : updating }"
+                :readonly="updating"
+                @change="updateNote"
+                @keyup.debounce.750ms="$dispatch('change')"
+              >
+                {{- cart.note -}}
+              </textarea>
+            </data-island>
+          </div>
+        {% endif %}
+        <div class="col-span-14 {% if template == 'cart' %} md:col-span-6 md:col-end-last {% endif %}">
+          <dl class="grid grid-cols-2 {% if template == 'cart' %} md:grid-cols-5 {% endif %} items-center text-right">
+            {%- for discount_application in cart.cart_level_discount_applications -%}
+              <div class="col-span-full -mx-1 inline-block flex justify-between rounded-button bg-scheme-accent-1 p-1 text-scheme-accent-1-contrast lg:col-span-full lg:col-start-2">
+                <dt class=" {% if template == 'cart' %} md:col-span-3 {% endif %}">
+                  <span class="sr-only">
+                    {{- 'customer.order.discount' | t }}:</span
+                  ><span>{{- discount_application.title -}}</span>
+                </dt>
+                <dd class="{% if template == 'cart' %} md:col-span-2 {% endif %}">
+                  -{{ discount_application.total_allocated_amount | money }}
+                </dd>
+              </div>
+            {%- endfor -%}
+            <dt class="text-left {% if template == 'cart' %} md:col-span-3 {% endif %}">
+              {{ 'cart.general.subtotal' | t }}
+            </dt>
+            <dd class="{% if template == 'cart' %} md:col-span-2 {% endif %}">
+              {{ cart.total_price | money_with_currency }}
+            </dd>
+          </dl>
+          <p class="mt-2.5 text-right text-xs">
+            {%- if cart.taxes_included -%}
+              {{ 'cart.general.taxes_included_but_shipping_at_checkout' | t }}
+            {%- else -%}
+              {{ 'cart.general.shipping_at_checkout' | t }}
+            {%- endif -%}
+          </p>
+        </div>
+        <div class="col-span-14 row-start-3 {% if template == 'cart' %} md:row-start-2 md:col-span-6 md:col-end-last {% endif %}">
+          <div class="relative z-10">
+            <input
+              class="no-js ml-auto block cursor-pointer border-general border-scheme-text px-5 py-2.5"
+              type="submit"
+              name="update"
+              value="{{ 'cart.general.update' | t }}"
+              form="cart"
+            >
+            <div class="push-btn relative inline-block w-full {% if template == 'cart' %} lg:mt-2.5 {% endif %}">
+              <input
+                class="push-btn__surface ml-auto block w-full cursor-pointer"
+                type="submit"
+                name="checkout"
+                value="{{ 'cart.general.checkout' | t }}"
+                form="cart"
+              >
+            </div>
+          </div>
+
+          {%- if additional_checkout_buttons
+            and template == 'cart'
+            and settings.enable_accelerated_checkout
+          -%}
+            <script>
+              const submitBtnEl = document.querySelector(
+                'input[type="submit"][name="checkout"][form="cart"]'
+              );
+
+              if (submitBtnEl) {
+                document.documentElement.style.setProperty(
+                  '--checkout-button-height',
+                  `${submitBtnEl.getBoundingClientRect().height}px`
+                );
+              }
+            </script>
+            <div class="cart__dynamic-checkout-buttons additional-checkout-buttons mt-2.5 lg:mt-5">
+              {{ content_for_additional_checkout_buttons }}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+      <div
+        class="mt-5 inline-block rounded-button bg-scheme-accent-1 p-2.5 text-sm text-scheme-accent-1-contrast empty:hidden"
+        id="cart-errors"
+      ></div>
+    </div>
+  {% endif %}
+</data-island>

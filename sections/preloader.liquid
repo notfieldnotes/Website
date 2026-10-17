@@ -1,0 +1,331 @@
+{% doc %}
+  Preloader
+
+  Full-screen overlay shown while the page first loads. It flicks through the
+  wordmark in one language after another - one block per language, each an
+  image or typed text - over a colour or an image, with an optional flicker
+  and the theme's outlined percentage counter.
+
+  Rendered unconditionally from layout/theme.liquid via {% section 'preloader' %}.
+
+  @example
+  {% section 'preloader' %}
+{% enddoc %}
+
+{% if section.settings.enabled %}
+  {%- liquid
+    assign s = section.settings
+    assign sid = section.id
+    assign items = section.blocks
+    assign w2 = s.logo_width | times: 2
+    assign w3 = s.logo_width | times: 3
+  -%}
+
+  <div
+    class="nfn-pl"
+    id="nfn-pl-{{ sid }}"
+    data-preloader
+    data-step="{{ s.step_duration }}"
+    data-loops="{{ s.loops }}"
+    data-minimum="{{ s.minimum_time }}"
+    data-maximum="{{ s.maximum_time }}"
+    data-fade="{{ s.fade_duration }}"
+    data-once="{{ s.once_per_visit }}"
+    data-counter="{{ s.show_counter }}"
+    aria-hidden="true"
+  >
+    {%- if s.background_image != blank -%}
+      <div class="nfn-pl__bg" style="background-image:url({{ s.background_image | image_url: width: 2400 }});"></div>
+    {%- endif -%}
+
+    <div class="nfn-pl__stage">
+      {%- if items.size > 0 -%}
+        {%- for b in items -%}
+          {%- assign i = b.settings -%}
+          <div class="nfn-pl__item{% if forloop.first %} is-on{% endif %}"
+            style="{% if i.text_color != blank %}--pl-ink:{{ i.text_color }};{% endif %}{% if i.hold > 0 %}--pl-hold:{{ i.hold }};{% endif %}"
+            data-item
+            data-hold="{{ i.hold }}"
+            {{ b.shopify_attributes }}>
+            {%- if i.image != blank -%}
+              <img
+                src="{{ i.image | image_url: width: s.logo_width }}"
+                srcset="{{ i.image | image_url: width: s.logo_width }} 1x, {{ i.image | image_url: width: w2 }} 2x, {{ i.image | image_url: width: w3 }} 3x"
+                alt=""
+                class="nfn-pl__img"
+                loading="eager"
+                decoding="sync"
+              >
+            {%- elsif i.text != blank -%}
+              <span class="nfn-pl__text">{{ i.text }}</span>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      {%- else -%}
+        <div class="nfn-pl__item is-on" data-item data-hold="0">
+          {%- if s.logo != blank -%}
+            <img src="{{ s.logo | image_url: width: s.logo_width }}" alt="" class="nfn-pl__img" loading="eager">
+          {%- else -%}
+            <span class="nfn-pl__text">{{ shop.name }}</span>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if s.show_counter -%}
+      <p class="nfn-pl__count"><span data-count>1</span>%</p>
+    {%- endif -%}
+  </div>
+
+  <style>
+    #nfn-pl-{{ sid }} {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: {{ s.background_color }};
+      color: {{ s.text_color }};
+      transition: opacity {{ s.fade_duration }}ms ease;
+    }
+    #nfn-pl-{{ sid }}.is-done { opacity: 0; pointer-events: none; }
+    #nfn-pl-{{ sid }}.is-gone { display: none; }
+
+    #nfn-pl-{{ sid }} .nfn-pl__bg {
+      position: absolute;
+      inset: 0;
+      background-size: {{ s.background_fit }};
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: {{ s.background_image_opacity | divided_by: 100.0 }};
+    }
+
+    #nfn-pl-{{ sid }} .nfn-pl__stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+    /* every language sits in the same cell, only one is lit at a time */
+    #nfn-pl-{{ sid }} .nfn-pl__item {
+      grid-area: 1 / 1;
+      display: none;
+      color: var(--pl-ink, {{ s.text_color }});
+      line-height: 1;
+      text-align: center;
+    }
+    #nfn-pl-{{ sid }} .nfn-pl__item.is-on { display: block; }
+
+    {%- if s.flicker %}
+    #nfn-pl-{{ sid }} .nfn-pl__item.is-on {
+      animation: nfn-pl-flicker {{ s.flicker_speed }}ms steps(1, end) infinite;
+    }
+    @keyframes nfn-pl-flicker {
+      0%   { opacity: 1; }
+      12%  { opacity: {{ s.flicker_depth | divided_by: 100.0 }}; }
+      22%  { opacity: 1; }
+      38%  { opacity: {{ s.flicker_depth | divided_by: 100.0 }}; }
+      46%  { opacity: 1; }
+      63%  { opacity: {{ s.flicker_depth | divided_by: 100.0 }}; }
+      70%  { opacity: 1; }
+      88%  { opacity: {{ s.flicker_depth | divided_by: 100.0 }}; }
+      100% { opacity: 1; }
+    }
+    {%- endif %}
+
+    #nfn-pl-{{ sid }} .nfn-pl__img {
+      display: block;
+      width: {{ s.logo_width }}px;
+      max-width: 80vw;
+      height: auto;
+    }
+    #nfn-pl-{{ sid }} .nfn-pl__text {
+      display: block;
+      font-family: var(--heading-font-stack);
+      font-weight: 900;
+      text-transform: {{ s.text_transform }};
+      letter-spacing: .02em;
+      font-size: clamp(1.5rem, {{ s.text_size }}vw, 9rem);
+    }
+
+    #nfn-pl-{{ sid }} .nfn-pl__count {
+      position: absolute;
+      right: {{ s.edge_padding }}rem;
+      bottom: {{ s.edge_padding }}rem;
+      margin: 0;
+      font-family: var(--heading-font-stack);
+      font-weight: 700;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      font-size: {{ s.number_size_mobile }}rem;
+      color: transparent;
+      -webkit-text-stroke: {{ s.number_stroke_width }}px {{ s.text_color }};
+      text-stroke: {{ s.number_stroke_width }}px {{ s.text_color }};
+    }
+    @media screen and (min-width: 750px) {
+      #nfn-pl-{{ sid }} .nfn-pl__count { font-size: {{ s.number_size_desktop }}rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #nfn-pl-{{ sid }} .nfn-pl__item.is-on { animation: none; }
+    }
+
+    .no-js #shopify-section-{{ sid }} { display: none; }
+  </style>
+
+  <script>
+    (function () {
+      var root = document.getElementById('nfn-pl-{{ sid }}');
+      if (!root) return;
+
+      var items = [].slice.call(root.querySelectorAll('[data-item]'));
+      var counter = root.querySelector('[data-count]');
+      var STEP = parseInt(root.dataset.step, 10) || 160;
+      var LOOPS = parseInt(root.dataset.loops, 10) || 1;
+      var MIN = parseInt(root.dataset.minimum, 10) || 0;
+      var MAX = parseInt(root.dataset.maximum, 10) || 6000;
+      var FADE = parseInt(root.dataset.fade, 10) || 400;
+      var ONCE = root.dataset.once === 'true';
+      var design = !!(window.Shopify && window.Shopify.designMode);
+
+      /* seen it already this visit - do not sit through it again */
+      if (ONCE && !design) {
+        var seen = false;
+        try { seen = sessionStorage.getItem('nfn-preloader') === '1'; } catch (e) {}
+        if (seen) { root.parentNode.removeChild(root); return; }
+        try { sessionStorage.setItem('nfn-preloader', '1'); } catch (e) {}
+      }
+
+      var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      var start = performance.now();
+      var at = 0;
+      var done = false;
+      var timer = null;
+      var raf = null;
+
+      function show(n) {
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].classList.contains('is-on') !== (i === n)) {
+            items[i].classList.toggle('is-on', i === n);
+          }
+        }
+      }
+
+      /* the sequence runs its full course, then waits for the page */
+      var total = items.length * Math.max(1, LOOPS);
+      var shown = 0;
+
+      function next() {
+        if (done) return;
+        shown++;
+        if (shown >= total) { finish(); return; }
+        at = (at + 1) % items.length;
+        show(at);
+        var hold = parseInt(items[at].dataset.hold, 10);
+        timer = setTimeout(next, hold > 0 ? hold : STEP);
+      }
+
+      function count(now) {
+        if (done || !counter) return;
+        var pct = Math.min(100, Math.floor(((now - start) / Math.max(1, MIN || 1200)) * 100) + 1);
+        counter.textContent = pct;
+        raf = requestAnimationFrame(count);
+      }
+
+      var pageReady = document.readyState === 'complete';
+      window.addEventListener('load', function () { pageReady = true; });
+
+      function finish() {
+        if (done) return;
+        var waited = performance.now() - start;
+        /* hold until the page is actually up, but never past the ceiling */
+        if ((!pageReady || waited < MIN) && waited < MAX) {
+          timer = setTimeout(finish, 80);
+          return;
+        }
+        done = true;
+        if (timer) clearTimeout(timer);
+        if (raf) cancelAnimationFrame(raf);
+        if (counter) counter.textContent = 100;
+        root.classList.add('is-done');
+        setTimeout(function () { root.classList.add('is-gone'); }, FADE + 50);
+      }
+
+      if (reduced || items.length < 2) {
+        show(items.length - 1);
+        timer = setTimeout(finish, Math.min(MIN, 600));
+      } else {
+        show(0);
+        timer = setTimeout(next, STEP);
+      }
+      if (counter) raf = requestAnimationFrame(count);
+
+      /* a hard stop, so a stalled asset can never leave the shop covered */
+      setTimeout(function () { pageReady = true; finish(); }, MAX);
+
+      document.addEventListener('shopify:section:load', function (e) {
+        if (e.detail && e.detail.sectionId === '{{ sid }}') { done = true; }
+      });
+    })();
+  </script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Preloader",
+  "settings": [
+    { "type": "checkbox", "id": "enabled", "label": "Show preloader", "info": "A full-screen overlay shown while the page first loads. Add a block for each language your wordmark is written in - it flicks through them in order.", "default": true },
+    { "type": "checkbox", "id": "once_per_visit", "label": "Only on the first page they open", "default": true, "info": "Off shows it on every page. It always runs in the theme editor so you can see it." },
+    { "type": "header", "content": "Background" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#000000" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "select", "id": "background_fit", "label": "How the image sits", "default": "cover", "options": [
+      { "value": "cover", "label": "Fill the screen" },
+      { "value": "contain", "label": "Fit inside" },
+      { "value": "auto", "label": "Actual size" }
+    ] },
+    { "type": "range", "id": "background_image_opacity", "label": "Image strength", "min": 10, "max": 100, "step": 5, "unit": "%", "default": 100 },
+    { "type": "header", "content": "The wordmarks" },
+    { "type": "range", "id": "logo_width", "label": "Width", "min": 60, "max": 900, "step": 20, "unit": "px", "default": 300 },
+    { "type": "color", "id": "text_color", "label": "Text and counter", "default": "#ffffff" },
+    { "type": "range", "id": "text_size", "label": "Typed text size", "min": 2, "max": 14, "step": 1, "unit": "vw", "default": 7, "info": "Only for blocks where you type the word instead of adding an image." },
+    { "type": "select", "id": "text_transform", "label": "Typed text case", "default": "none", "options": [
+      { "value": "none", "label": "As typed" },
+      { "value": "uppercase", "label": "UPPERCASE" },
+      { "value": "lowercase", "label": "lowercase" }
+    ] },
+    { "type": "image_picker", "id": "logo", "label": "Fallback logo", "info": "Shown only when there are no blocks." },
+    { "type": "header", "content": "Timing" },
+    { "type": "range", "id": "step_duration", "label": "Each one shows for", "min": 60, "max": 1000, "step": 20, "unit": "ms", "default": 160 },
+    { "type": "range", "id": "loops", "label": "Times through the list", "min": 1, "max": 6, "step": 1, "default": 2 },
+    { "type": "range", "id": "minimum_time", "label": "Stays up at least", "min": 0, "max": 6000, "step": 100, "unit": "ms", "default": 1400 },
+    { "type": "range", "id": "maximum_time", "label": "Never longer than", "min": 1000, "max": 9000, "step": 500, "unit": "ms", "default": 6000, "info": "A safety net - the shop is never left covered if something is slow to load." },
+    { "type": "range", "id": "fade_duration", "label": "Fade out", "min": 0, "max": 1200, "step": 50, "unit": "ms", "default": 400 },
+    { "type": "header", "content": "Flicker" },
+    { "type": "checkbox", "id": "flicker", "label": "Flicker each one", "default": true },
+    { "type": "range", "id": "flicker_speed", "label": "Flicker speed", "min": 60, "max": 1200, "step": 20, "unit": "ms", "default": 260 },
+    { "type": "range", "id": "flicker_depth", "label": "How far it dips", "min": 0, "max": 90, "step": 5, "unit": "%", "default": 25, "info": "0 blinks right out, 90 is a faint pulse." },
+    { "type": "header", "content": "Percentage counter" },
+    { "type": "checkbox", "id": "show_counter", "label": "Show the counter", "default": true },
+    { "type": "range", "id": "number_size_mobile", "label": "Number size (mobile)", "min": 2, "max": 8, "step": 1, "unit": "rem", "default": 4 },
+    { "type": "range", "id": "number_size_desktop", "label": "Number size (desktop)", "min": 3, "max": 14, "step": 1, "unit": "rem", "default": 7 },
+    { "type": "range", "id": "number_stroke_width", "label": "Number outline thickness", "min": 1, "max": 4, "step": 1, "unit": "px", "default": 2 },
+    { "type": "range", "id": "edge_padding", "label": "Bottom/right padding", "min": 1, "max": 5, "step": 1, "unit": "rem", "default": 2 }
+  ],
+  "blocks": [
+    {
+      "type": "logo",
+      "name": "Language",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Wordmark image", "info": "Your logo written in this language. A transparent PNG or an SVG works best." },
+        { "type": "text", "id": "text", "label": "Or type it", "info": "Used when no image is picked." },
+        { "type": "color", "id": "text_color", "label": "Colour for this one" },
+        { "type": "range", "id": "hold", "label": "Hold this one for", "min": 0, "max": 2000, "step": 20, "unit": "ms", "default": 0, "info": "0 uses the shared timing. Raise it to linger on your main wordmark." }
+      ]
+    }
+  ],
+  "max_blocks": 16
+}
+{% endschema %}

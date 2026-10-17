@@ -1,0 +1,126 @@
+{% comment %}
+  Back link - the "« पीछे" in the top corner of every page, the way
+  cvnt.in does it. Takes the visitor back to wherever they came from.
+
+  Add it once to the Header group and it shows on every page.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+
+  assign hide = false
+  if s.hide_on_home and template.name == 'index'
+    assign hide = true
+  endif
+-%}
+
+{%- unless hide -%}
+  <a class="bkl" id="bkl-{{ sid }}" href="{{ s.fallback | default: routes.root_url }}" data-back
+    aria-label="{{ s.aria_label | escape }}">
+    {%- if s.show_arrows -%}<span class="bkl__arrows" aria-hidden="true">{{ s.arrows }}</span>{%- endif -%}
+    <span class="bkl__label">{{ s.label }}</span>
+  </a>
+
+  <style>
+    /* the theme positions every section wrapper, which would make the offsets
+       below count from wherever this section happens to sit in the header.
+       Taking it out of the equation measures them from the top of the page,
+       so the link lands in the same spot on every template. */
+    #shopify-section-{{ sid }} { position: static; }
+
+    #bkl-{{ sid }} {
+      /* absolute, not fixed: it sits at one spot near the top of the page and
+         scrolls away with everything else */
+      position: {% if s.pinned %}fixed{% else %}absolute{% endif %};
+      top: {{ s.top_offset }}px;
+      {% if s.corner == 'right' %}right{% else %}left{% endif %}: {{ s.side_offset }}px;
+      z-index: {{ s.layer }};
+      display: inline-flex;
+      align-items: baseline;
+      gap: .3em;
+      text-decoration: none;
+      color: {{ s.color }};
+      font-family: "Kohinoor Devanagari", "Noto Sans Devanagari", "Mangal", var(--main-font-stack);
+      font-weight: {{ s.weight }};
+      font-size: {{ s.size }}px;
+      line-height: 1;
+      letter-spacing: .01em;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    #bkl-{{ sid }}:hover,
+    #bkl-{{ sid }}:focus-visible { opacity: .75; transform: translateX(-2px); }
+    #bkl-{{ sid }} .bkl__arrows { font-family: var(--main-font-stack); }
+
+    @media (max-width: 749px) {
+      #bkl-{{ sid }} {
+        top: {{ s.top_offset_mobile }}px;
+        {% if s.corner == 'right' %}right{% else %}left{% endif %}: {{ s.side_offset_mobile }}px;
+        font-size: {{ s.size_mobile }}px;
+        {% unless s.show_on_mobile %}display: none;{% endunless %}
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #bkl-{{ sid }} { transition: none; }
+    }
+  </style>
+
+  <script>
+    (function () {
+      var a = document.getElementById('bkl-{{ sid }}');
+      if (!a) return;
+
+      a.addEventListener('click', function (e) {
+        /* only step back when there is somewhere of ours to step back to -
+           otherwise the href takes over, so the link always goes somewhere */
+        var sameSite = false;
+        try {
+          sameSite = !!document.referrer &&
+            new URL(document.referrer).origin === window.location.origin;
+        } catch (err) {}
+
+        if (sameSite && window.history.length > 1) {
+          e.preventDefault();
+          window.history.back();
+        }
+      });
+    })();
+  </script>
+{%- endunless -%}
+
+{% schema %}
+{
+  "name": "Back link",
+  "tag": "div",
+  "class": "section-back-link",
+  "settings": [
+    { "type": "paragraph", "content": "A back link pinned to the corner of every page. Add it once to the Header group. It steps the visitor back to the page they came from, and falls back to the link below when there is nothing to go back to." },
+    { "type": "text", "id": "label", "label": "Text", "default": "पीछे" },
+    { "type": "checkbox", "id": "show_arrows", "label": "Show the arrows", "default": true },
+    { "type": "text", "id": "arrows", "label": "Arrows", "default": "«" },
+    { "type": "url", "id": "fallback", "label": "Falls back to", "info": "Used when there is no previous page, for instance when someone lands here from a search result." },
+    { "type": "text", "id": "aria_label", "label": "Name for screen readers", "default": "Go back" },
+    { "type": "header", "content": "Look" },
+    { "type": "color", "id": "color", "label": "Colour", "default": "#e2551f" },
+    { "type": "range", "id": "size", "label": "Size", "min": 10, "max": 48, "step": 1, "unit": "px", "default": 22 },
+    { "type": "range", "id": "weight", "label": "Weight", "min": 300, "max": 900, "step": 100, "default": 600 },
+    { "type": "header", "content": "Where it sits" },
+    { "type": "select", "id": "corner", "label": "Corner", "default": "left", "options": [
+      { "value": "left", "label": "Top left" },
+      { "value": "right", "label": "Top right" }
+    ] },
+    { "type": "range", "id": "top_offset", "label": "From the top", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 68, "info": "The MENU button sits in the same corner, so leave room for it." },
+    { "type": "range", "id": "side_offset", "label": "From the side", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 20 },
+    { "type": "range", "id": "layer", "label": "Sits above", "min": 1, "max": 60, "step": 1, "default": 6 },
+    { "type": "checkbox", "id": "pinned", "label": "Follow the screen as you scroll", "default": false, "info": "Off leaves it at one spot near the top of the page, so it scrolls away with the rest of the content." },
+    { "type": "checkbox", "id": "hide_on_home", "label": "Hide on the home page", "default": true, "info": "There is nothing to go back to from the front page." },
+    { "type": "header", "content": "On phones" },
+    { "type": "checkbox", "id": "show_on_mobile", "label": "Show on phones", "default": true },
+    { "type": "range", "id": "size_mobile", "label": "Size on phones", "min": 10, "max": 40, "step": 1, "unit": "px", "default": 18 },
+    { "type": "range", "id": "top_offset_mobile", "label": "From the top, phones", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 60 },
+    { "type": "range", "id": "side_offset_mobile", "label": "From the side, phones", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 16 }
+  ],
+  "enabled_on": { "groups": ["header", "footer"] }
+}
+{% endschema %}

@@ -1,0 +1,845 @@
+{%- comment -%}
+  Product showcase card.
+
+  The reference layout: a single coloured card with a small spec line at the
+  top, the product name set huge as a backdrop wordmark, the product photo
+  sitting in front of it, the price bottom left, the option swatches bottom
+  right, and a full-width buy bar underneath.
+{%- endcomment -%}
+
+{%- liquid
+  assign sid = section.id | replace: '_', '-'
+  assign s = section.settings
+  assign p = s.product | default: product
+  assign cur = p.selected_or_first_available_variant
+  assign hero = s.image | default: p.featured_image
+  assign wordmark = s.wordmark | default: p.title
+  assign formid = 'pshow-form-' | append: sid
+  assign pill_h = s.btn_size | times: 12 | divided_by: 10 | plus: 6
+  assign pill_h = s.btn_pad | times: 2 | plus: pill_h | plus: s.button_border_width | plus: s.button_border_width
+-%}
+
+<style>
+  #pshow-{{ sid }} {
+    background: {{ s.page_color2 }};
+    padding: {{ s.padding_top }}rem {{ s.side_pad }}rem {{ s.padding_bottom }}rem;
+  }
+  #pshow-{{ sid }} * { box-sizing: border-box; }
+
+  .pshow-{{ sid }}__pattern {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .pshow-{{ sid }}__meta { position: relative; z-index: 1; }
+  .pshow-{{ sid }}__stage { position: relative; z-index: 1; overflow: visible; }
+  /* the card's own rounding still has to clip the colour band and strips */
+  .pshow-{{ sid }}__foot { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+  .pshow-{{ sid }}__card {
+    position: relative;
+    max-width: {{ s.card_width }}px;
+    margin: 0 auto;
+    border-radius: {{ s.radius }}px;
+    overflow: {{ s.photo_overflow | default: 'hidden' }};
+    background: {{ s.card_color2 }};
+    color: {{ s.text_color2 }};
+    {% if s.card_shadow > 0 %}box-shadow: 0 {{ s.card_shadow }}px {{ s.card_shadow | times: 2 }}px rgba(0,0,0,.18);{% endif %}
+  }
+
+  /* ---- spec line ---- */
+  .pshow-{{ sid }}__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: {{ s.inner_pad }}px {{ s.inner_pad }}px 0;
+    font-size: {{ s.meta_size2 }}px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    opacity: .85;
+  }
+
+  /* ---- wordmark + photo ---- */
+  .pshow-{{ sid }}__stage {
+    position: relative;
+    padding: {{ s.inner_pad }}px {{ s.inner_pad }}px 0;
+    perspective: {{ s.depth }}px;
+  }
+  .pshow-{{ sid }}__word {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-size: {{ s.word_size3 }}vw;
+    line-height: .86;
+    font-weight: {{ s.word_weight }};
+    letter-spacing: calc({{ s.word_tracking }} * 0.01em);
+    text-align: {{ s.word_align }};
+    text-transform: {{ s.word_case }};
+    color: {{ s.word_color2 }};
+    {% if s.word_outline %}-webkit-text-stroke: 1.5px {{ s.word_color2 }}; color: transparent;{% endif %}
+    white-space: {% if s.word_wrap %}normal{% else %}nowrap{% endif %};
+    overflow: hidden;
+  }
+  .pshow-{{ sid }}__photo {
+    display: block;
+    width: {{ s.photo_width }}%;
+    max-width: none;
+    height: auto;
+    /* auto margins collapse to 0/negative once the photo is wider than the
+       stage, which pushes it off to one side - this keeps it centred. */
+    margin: {{ s.photo_pull2 }}px calc((100% - {{ s.photo_width }}%) / 2) 0;
+    position: relative;
+    z-index: 2;
+    {% if s.photo_shadow > 0 %}filter:
+      drop-shadow(0 {{ s.photo_shadow }}px {{ s.photo_shadow | times: 2 }}px rgba(0,0,0,.34))
+      drop-shadow(0 {{ s.photo_shadow | divided_by: 3 }}px {{ s.photo_shadow | divided_by: 2 }}px rgba(0,0,0,.22));{% endif %}
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pshow-{{ sid }}__photo { transform: none !important; }
+  }
+  .pshow-{{ sid }}__floor {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: {{ s.floor_height }}%;
+    background: {{ s.floor_color3 }};
+    z-index: 1;
+  }
+
+  /* ---- price + options ---- */
+  .pshow-{{ sid }}__foot {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: {{ s.inner_pad }}px;
+    background: {{ s.foot_color2 }};
+    color: {{ s.foot_text_color2 }};
+  }
+  .pshow-{{ sid }}__plabel {
+    font-size: {{ s.meta_size2 }}px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    opacity: .7;
+  }
+  .pshow-{{ sid }}__price {
+    margin-top: 2px;
+    font-size: {{ s.price_size2 }}px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .pshow-{{ sid }}__was {
+    margin-left: 8px;
+    font-size: {{ s.price_size2 | times: 0.55 | round }}px;
+    font-weight: 500;
+    opacity: .6;
+    text-decoration: line-through;
+  }
+  .pshow-{{ sid }}__opts { display: flex; gap: {{ s.swatch_gap }}px; align-items: flex-start; }
+  .pshow-{{ sid }}__opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .pshow-{{ sid }}__dot {
+    width: {{ s.swatch_size2 }}px;
+    height: {{ s.swatch_size2 }}px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background: {{ s.swatch_color2 }};
+    display: grid;
+    place-items: center;
+    font-size: {{ s.swatch_size2 | times: 0.38 | round }}px;
+    font-weight: 700;
+    color: {{ s.swatch_text_color2 }};
+    text-transform: uppercase;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .pshow-{{ sid }}__opt[aria-pressed='true'] .pshow-{{ sid }}__dot {
+    border-color: {{ s.swatch_active_color2 }};
+    transform: scale(1.04);
+  }
+  .pshow-{{ sid }}__opt[data-sold='true'] { opacity: .35; }
+  .pshow-{{ sid }}__name {
+    font-size: {{ s.meta_size2 }}px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ---- buttons: same push-button look as the rest of the shop ---- */
+  .pshow-{{ sid }}__buys {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: {{ s.button_gap }}px;
+    padding: {{ s.inner_pad }}px {{ s.inner_pad }}px {{ s.buys_pad_bottom }}px;
+    background: {{ s.foot_color2 }};
+  }
+  .pshow-{{ sid }}__btn,
+  .pshow-{{ sid }}__buys .shopify-payment-button__button {
+    display: block;
+    width: 100%;
+    padding: {{ s.btn_pad }}px 20px;
+    border: {{ s.button_border_width }}px solid {{ s.button_border_color2 }};
+    border-radius: {{ s.button_radius }}px;
+    background: {{ s.button_color2 }};
+    color: {{ s.button_text_color2 }};
+    box-shadow: {{ s.button_shadow }}px {{ s.button_shadow }}px 0 0 {{ s.button_shadow_color2 }};
+    font-family: inherit;
+    font-size: {{ s.btn_size }}px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .18s ease;
+  }
+  .pshow-{{ sid }}__btn:hover,
+  .pshow-{{ sid }}__buys .shopify-payment-button__button:hover {
+    transform: translate(1px, 1px);
+    box-shadow: {{ s.button_shadow | minus: 1 }}px {{ s.button_shadow | minus: 1 }}px 0 0 {{ s.button_shadow_color2 }};
+  }
+  .pshow-{{ sid }}__btn[disabled] { opacity: .5; cursor: not-allowed; box-shadow: none; }
+
+  /* The dynamic checkout button is injected by Shopify (or the payment app).
+     Its own square backgrounds have to be overridden all the way down, and the
+     offset shadow is drawn with drop-shadow so it follows the rounded shape
+     rather than the container's box. */
+  .pshow-{{ sid }}__buys .shopify-payment-button,
+  .pshow-{{ sid }}__buys [data-shopify-buttoncontainer] {
+    border-radius: {{ s.button_radius }}px;
+    overflow: hidden;
+    background: transparent;
+    box-shadow: none;
+    {% if s.button_shadow > 0 %}filter: drop-shadow({{ s.button_shadow }}px {{ s.button_shadow }}px 0 {{ s.button_shadow_color2 }});{% endif %}
+  }
+  .pshow-{{ sid }}__buys .shopify-payment-button *,
+  .pshow-{{ sid }}__buys [data-shopify-buttoncontainer] * {
+    border-radius: {{ s.button_radius }}px !important;
+    box-shadow: none !important;
+  }
+  .pshow-{{ sid }}__buys .shopify-payment-button__button--unbranded,
+  .pshow-{{ sid }}__buys .shopify-payment-button__button {
+    min-height: 0 !important;
+    padding: {{ s.btn_pad }}px 20px !important;
+    border: {{ s.button_border_width }}px solid {{ s.button_border_color2 }} !important;
+    background: {{ s.button_color2 }} !important;
+    color: {{ s.button_text_color2 }} !important;
+    font-family: inherit !important;
+    font-size: {{ s.btn_size }}px !important;
+    font-weight: 800 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Razorpay Magic swaps Shopify's button for its own custom element, whose
+     insides are out of reach, so the wrappers clip it to the same pill. */
+  .pshow-{{ sid }}__buys .magic-buy-btn__parent,
+  .pshow-{{ sid }}__buys .magic-buy-btn,
+  .pshow-{{ sid }}__buys magic-checkout-btn {
+    display: block;
+    border-radius: {{ s.button_radius }}px !important;
+    overflow: hidden !important;
+    /* Razorpay hangs a "Secured by" strip below its button; clipping to the
+       pill's own height keeps it from peeking out. */
+    height: var(--pshow-pill, {{ pill_h }}px) !important;
+    max-height: var(--pshow-pill, {{ pill_h }}px) !important;
+    min-height: 0 !important;
+  }
+  .pshow-{{ sid }}__buys .magic-buy-btn__parent {
+    {% if s.button_shadow > 0 %}filter: drop-shadow({{ s.button_shadow }}px {{ s.button_shadow }}px 0 {{ s.button_shadow_color2 }});{% endif %}
+  }
+
+
+  .pshow-{{ sid }}__qty {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: {{ s.inner_pad }}px;
+    padding-top: 0;
+    background: {{ s.foot_color2 }};
+    color: {{ s.foot_text_color2 }};
+    font-size: {{ s.meta_size2 }}px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .pshow-{{ sid }}__stepper {
+    display: inline-flex;
+    align-items: stretch;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .pshow-{{ sid }}__step {
+    width: 40px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color .15s ease;
+  }
+  .pshow-{{ sid }}__step:hover { background: rgba(0,0,0,.08); }
+  .pshow-{{ sid }}__qty input {
+    width: 54px;
+    padding: 10px 0;
+    border: 0;
+    border-left: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+  .pshow-{{ sid }}__qty input::-webkit-outer-spin-button,
+  .pshow-{{ sid }}__qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .pshow-{{ sid }}__blocks {
+    max-width: {{ s.card_width }}px;
+    margin: {{ s.body_gap }}px auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    color: {{ s.body_color }};
+  }
+  .pshow-{{ sid }}__badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: {{ s.meta_size2 }}px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .pshow-{{ sid }}__rt { font-size: {{ s.body_size }}px; line-height: 1.6; }
+  .pshow-{{ sid }}__rt-h { margin: 0 0 6px; font-size: {{ s.body_size | plus: 6 }}px; }
+  .pshow-{{ sid }}__bimg { display: block; height: auto; border-radius: 14px; }
+  .pshow-{{ sid }}__btn--block { width: auto; text-decoration: none; }
+
+  .pshow-{{ sid }}__body {
+    max-width: {{ s.card_width }}px;
+    margin: {{ s.body_gap }}px auto 0;
+    color: {{ s.body_color }};
+    font-size: {{ s.body_size }}px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 749px) {
+    #pshow-{{ sid }} { padding-left: {{ s.side_pad_mobile }}rem; padding-right: {{ s.side_pad_mobile }}rem; }
+    .pshow-{{ sid }}__word { font-size: {{ s.word_size_mobile2 }}vw; white-space: normal; }
+    .pshow-{{ sid }}__foot { align-items: flex-start; }
+    .pshow-{{ sid }}__price { font-size: {{ s.price_size2 | times: 0.8 | round }}px; }
+  }
+</style>
+
+{%- if p == blank -%}
+  {%- if request.design_mode -%}
+    <div style="padding:2rem;text-align:center;font-family:inherit;">
+      Pick a product for this section in the sidebar, or add the section to a product template.
+    </div>
+  {%- endif -%}
+{%- else -%}
+<section id="pshow-{{ sid }}">
+  <div class="pshow-{{ sid }}__card">
+
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'pattern' -%}
+        {%- liquid
+          assign pc = block.settings.color
+          assign psz = block.settings.size
+          assign pop = block.settings.opacity | divided_by: 100.0
+        -%}
+        <div class="pshow-{{ sid }}__pattern" {{ block.shopify_attributes }}
+          style="opacity:{{ pop }};
+            {%- case block.settings.style -%}
+              {%- when 'grid' -%}
+                background-image:
+                  linear-gradient({{ pc }} 1px, transparent 1px),
+                  linear-gradient(90deg, {{ pc }} 1px, transparent 1px);
+                background-size: {{ psz }}px {{ psz }}px;
+              {%- when 'dots' -%}
+                background-image: radial-gradient({{ pc }} {{ block.settings.weight }}px, transparent {{ block.settings.weight }}px);
+                background-size: {{ psz }}px {{ psz }}px;
+              {%- when 'diagonal' -%}
+                background-image: repeating-linear-gradient(45deg, {{ pc }} 0 {{ block.settings.weight }}px, transparent {{ block.settings.weight }}px {{ psz }}px);
+              {%- when 'crosshatch' -%}
+                background-image:
+                  repeating-linear-gradient(45deg, {{ pc }} 0 {{ block.settings.weight }}px, transparent {{ block.settings.weight }}px {{ psz }}px),
+                  repeating-linear-gradient(-45deg, {{ pc }} 0 {{ block.settings.weight }}px, transparent {{ block.settings.weight }}px {{ psz }}px);
+              {%- when 'stripes' -%}
+                background-image: repeating-linear-gradient(90deg, {{ pc }} 0 {{ block.settings.weight }}px, transparent {{ block.settings.weight }}px {{ psz }}px);
+            {%- endcase -%}"></div>
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- if s.meta_left != blank or s.meta_right != blank -%}
+      <div class="pshow-{{ sid }}__meta">
+        <span>{{ s.meta_left }}</span>
+        <span>{{ s.meta_right }}</span>
+      </div>
+    {%- endif -%}
+
+    <div class="pshow-{{ sid }}__stage">
+      {%- if s.floor_height > 0 -%}<div class="pshow-{{ sid }}__floor"></div>{%- endif -%}
+      <h1 class="pshow-{{ sid }}__word" data-pshow-word>{{ wordmark }}</h1>
+      {%- if hero -%}
+        <img
+          class="pshow-{{ sid }}__photo"
+          data-pshow-photo
+          src="{{ hero | image_url: width: 1400 }}"
+          srcset="{{ hero | image_url: width: 700 }} 700w, {{ hero | image_url: width: 1400 }} 1400w"
+          sizes="(min-width: 750px) {{ s.card_width }}px, 100vw"
+          width="{{ hero.width }}"
+          height="{{ hero.height }}"
+          alt="{{ hero.alt | escape | default: p.title | escape }}"
+          loading="eager">
+      {%- endif -%}
+    </div>
+
+    <div class="pshow-{{ sid }}__foot">
+      <div>
+        <div class="pshow-{{ sid }}__plabel">{{ s.price_label }}</div>
+        <div class="pshow-{{ sid }}__price" data-pshow-price>
+          {{ cur.price | money }}
+          {%- if cur.compare_at_price > cur.price -%}
+            <span class="pshow-{{ sid }}__was">{{ cur.compare_at_price | money }}</span>
+          {%- endif -%}
+        </div>
+      </div>
+
+      {%- if p.variants.size > 1 -%}
+        <div class="pshow-{{ sid }}__opts">
+          {%- for v in p.variants limit: s.max_swatches -%}
+            <button
+              type="button"
+              class="pshow-{{ sid }}__opt"
+              data-pshow-variant="{{ v.id }}"
+              data-price="{{ v.price | money }}"
+              data-compare="{% if v.compare_at_price > v.price %}{{ v.compare_at_price | money }}{% endif %}"
+              data-sold="{% unless v.available %}true{% endunless %}"
+              {% if v.image %}data-image="{{ v.image | image_url: width: 1400 }}"{% endif %}
+              aria-pressed="{% if v.id == cur.id %}true{% else %}false{% endif %}">
+              <span class="pshow-{{ sid }}__dot">{{ v.title | slice: 0 }}</span>
+              {%- if s.show_swatch_names -%}
+                <span class="pshow-{{ sid }}__name">{{ v.title | truncate: 10, '' }}</span>
+              {%- endif -%}
+            </button>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- form 'product', p, id: formid, novalidate: 'novalidate' -%}
+      <input type="hidden" name="id" value="{{ cur.id }}" data-pshow-id>
+
+      {%- if s.show_quantity -%}
+        <div class="pshow-{{ sid }}__qty">
+          <label for="pshow-qty-{{ sid }}">{{ s.quantity_label }}</label>
+          <div class="pshow-{{ sid }}__stepper">
+            <button type="button" class="pshow-{{ sid }}__step" data-pshow-step="-1" aria-label="Lower the quantity">&minus;</button>
+            <input id="pshow-qty-{{ sid }}" type="number" name="quantity" value="1" min="1" inputmode="numeric">
+            <button type="button" class="pshow-{{ sid }}__step" data-pshow-step="1" aria-label="Raise the quantity">+</button>
+          </div>
+        </div>
+      {%- endif -%}
+
+      <div class="pshow-{{ sid }}__buys">
+        <button type="submit" name="add" class="pshow-{{ sid }}__btn" data-pshow-add
+          {% unless cur.available %}disabled{% endunless %}>
+          <span data-pshow-label>{% if cur.available %}{{ s.button_label }}{% else %}{{ s.sold_out_label }}{% endif %}</span>
+        </button>
+
+        {%- if s.show_buy_it_now -%}
+          {{ form | payment_button }}
+        {%- endif -%}
+      </div>
+
+    {%- endform -%}
+
+  </div>
+
+  {%- if section.blocks.size > 0 -%}
+    <div class="pshow-{{ sid }}__blocks">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'badge' -%}
+            <span class="pshow-{{ sid }}__badge"
+              style="background:{{ block.settings.color }};color:{{ block.settings.text_color2 }};"
+              {{ block.shopify_attributes }}>{{ block.settings.text }}</span>
+          {%- when 'text' -%}
+            <div class="pshow-{{ sid }}__rt" style="color:{{ block.settings.text_color2 }};" {{ block.shopify_attributes }}>
+              {%- if block.settings.heading != blank -%}
+                <h3 class="pshow-{{ sid }}__rt-h">{{ block.settings.heading }}</h3>
+              {%- endif -%}
+              {{ block.settings.text }}
+            </div>
+          {%- when 'image' -%}
+            {%- if block.settings.image -%}
+              <img class="pshow-{{ sid }}__bimg" {{ block.shopify_attributes }}
+                style="max-width:{{ block.settings.width }}%;"
+                src="{{ block.settings.image | image_url: width: 1200 }}"
+                width="{{ block.settings.image.width }}" height="{{ block.settings.image.height }}"
+                alt="{{ block.settings.image.alt | escape }}" loading="lazy">
+            {%- endif -%}
+          {%- when 'button' -%}
+            {%- if block.settings.label != blank -%}
+              <a class="pshow-{{ sid }}__btn pshow-{{ sid }}__btn--block" {{ block.shopify_attributes }}
+                href="{{ block.settings.link | default: '#' }}">{{ block.settings.label }}</a>
+            {%- endif -%}
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+
+  {%- if s.show_product_description and p.description != blank -%}
+    <div class="pshow-{{ sid }}__body">{{ p.description }}</div>
+  {%- endif -%}
+</section>
+{%- endif -%}
+
+<script>
+  (function () {
+    var root = document.getElementById('pshow-{{ sid }}');
+    if (!root) return;
+
+    var idField = root.querySelector('[data-pshow-id]');
+    var priceEl = root.querySelector('[data-pshow-price]');
+    var photo   = root.querySelector('[data-pshow-photo]');
+    var addBtn  = root.querySelector('[data-pshow-add]');
+    var label   = root.querySelector('[data-pshow-label]');
+    var opts    = root.querySelectorAll('[data-pshow-variant]');
+    var qtyIn   = root.querySelector('input[name="quantity"]');
+
+    /* ---- 3D drift: the photo leans with the scroll and with the pointer ---- */
+    if ({{ s.enable_3d | json }} && photo &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      var TILT  = {{ s.tilt2 }};
+      var FLOAT = {{ s.float2 }};
+      var want = { x: 0, y: 0, lift: 0 };
+      var at   = { x: 0, y: 0, lift: 0 };
+      var pointerIn = false;
+
+      root.addEventListener('pointermove', function (e) {
+        var r = root.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        pointerIn = true;
+        want.y = ((e.clientX - r.left) / r.width - 0.5) * 2 * TILT;
+        want.x = -((e.clientY - r.top) / r.height - 0.5) * 2 * TILT;
+      });
+      root.addEventListener('pointerleave', function () { pointerIn = false; });
+
+      function onScroll() {
+        var r = root.getBoundingClientRect();
+        var vh = window.innerHeight || 1;
+        /* -1 below the fold, 0 centred, 1 above it. */
+        var p = 1 - (r.top + r.height / 2) / (vh / 2);
+        p = Math.max(-1, Math.min(1, p));
+        want.lift = -p * FLOAT;
+        if (!pointerIn) { want.x = p * TILT * 0.6; want.y = 0; }
+      }
+
+      var last = 0;
+      function frame(t) {
+        var dt = last ? Math.min((t - last) / 1000, 0.1) : 0.016;
+        last = t;
+        var a = 1 - Math.pow(1 - 0.12, dt * 60);
+        at.x += (want.x - at.x) * a;
+        at.y += (want.y - at.y) * a;
+        at.lift += (want.lift - at.lift) * a;
+        photo.style.transform =
+          'translate3d(0,' + at.lift.toFixed(2) + 'px,0)' +
+          ' rotateX(' + at.x.toFixed(2) + 'deg)' +
+          ' rotateY(' + at.y.toFixed(2) + 'deg)';
+        requestAnimationFrame(frame);
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
+      onScroll();
+      requestAnimationFrame(frame);
+    }
+
+    /* Match Razorpay's button to the real height of our own, so its
+       "Secured by" strip cannot peek out underneath. */
+    function sizePill() {
+      if (!addBtn) return;
+      var h = Math.round(addBtn.getBoundingClientRect().height);
+      if (h > 0) root.style.setProperty('--pshow-pill', h + 'px');
+    }
+    sizePill();
+    window.addEventListener('resize', sizePill);
+    window.addEventListener('load', sizePill);
+    if (window.MutationObserver) {
+      new MutationObserver(sizePill).observe(root, { childList: true, subtree: true });
+    }
+
+    /* Match the wordmark to whatever font the shop's headings use, read off a
+       real heading rather than hard-coded, so it follows the theme settings. */
+    if ({{ s.word_font | json }} === 'theme') {
+      var word = root.querySelector('[data-pshow-word]');
+      if (word) {
+        var heads = document.querySelectorAll('h1, h2, h3, .h1, .h2');
+        for (var n = 0; n < heads.length; n++) {
+          if (root.contains(heads[n])) continue;
+          var fam = getComputedStyle(heads[n]).fontFamily;
+          if (fam) { word.style.fontFamily = fam; break; }
+        }
+      }
+    }
+
+    var steps = root.querySelectorAll('[data-pshow-step]');
+    for (var k = 0; k < steps.length; k++) {
+      steps[k].addEventListener('click', function () {
+        if (!qtyIn) return;
+        var by = parseInt(this.getAttribute('data-pshow-step'), 10);
+        var now = parseInt(qtyIn.value, 10) || 1;
+        qtyIn.value = Math.max(1, now + by);
+        qtyIn.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    var SOLD = {{ s.sold_out_label | json }};
+    var BUY  = {{ s.button_label | json }};
+    var WAS  = 'pshow-{{ sid }}__was';
+
+    for (var i = 0; i < opts.length; i++) {
+      opts[i].addEventListener('click', function () {
+        var btn = this;
+        for (var j = 0; j < opts.length; j++) opts[j].setAttribute('aria-pressed', 'false');
+        btn.setAttribute('aria-pressed', 'true');
+
+        if (idField) idField.value = btn.getAttribute('data-pshow-variant');
+
+        if (priceEl) {
+          var html = btn.getAttribute('data-price') || '';
+          var was = btn.getAttribute('data-compare');
+          if (was) html += ' <span class="' + WAS + '">' + was + '</span>';
+          priceEl.innerHTML = html;
+        }
+
+        var img = btn.getAttribute('data-image');
+        if (img && photo) { photo.removeAttribute('srcset'); photo.src = img; }
+
+        var sold = btn.getAttribute('data-sold') === 'true';
+        if (addBtn) addBtn.disabled = sold;
+        if (label) label.textContent = sold ? SOLD : BUY;
+
+        /* Keep the address bar in step so a refresh or share keeps the choice. */
+        if (window.history && history.replaceState) {
+          var u = new URL(window.location.href);
+          u.searchParams.set('variant', btn.getAttribute('data-pshow-variant'));
+          history.replaceState({}, '', u.toString());
+        }
+      });
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Product showcase",
+  "tag": "section",
+  "settings": [
+    { "type": "product", "id": "product", "label": "Product (leave empty on a product page to use that product)" },
+    { "type": "header", "content": "Spec line" },
+    { "type": "text", "id": "meta_left", "label": "Top left text", "default": "POCKET MEMO - 60 PAGES" },
+    { "type": "text", "id": "meta_right", "label": "Top right text", "default": "3.5 x 5.5 IN" },
+    { "type": "header", "content": "Name behind the product" },
+    { "type": "text", "id": "wordmark", "label": "Text (leave empty to use the product name)" },
+    { "type": "range", "id": "word_size3", "min": 4, "max": 26, "step": 1, "unit": "vw", "label": "Size", "default": 11 },
+    { "type": "range", "id": "word_size_mobile2", "min": 6, "max": 30, "step": 1, "unit": "vw", "label": "Size on mobile", "default": 13 },
+    { "type": "range", "id": "word_tracking", "min": -8, "max": 20, "step": 1, "unit": "%", "label": "Letter spacing", "default": -2 },
+    { "type": "range", "id": "word_weight", "min": 300, "max": 900, "step": 100, "label": "Weight", "default": 800 },
+    {
+      "type": "select",
+      "id": "word_align",
+      "label": "Alignment",
+      "default": "center",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" },
+        { "value": "right", "label": "Right" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "word_case",
+      "label": "Letter case",
+      "default": "uppercase",
+      "options": [
+        { "value": "none", "label": "As typed" },
+        { "value": "uppercase", "label": "UPPERCASE" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "word_font",
+      "label": "Font",
+      "default": "theme",
+      "options": [
+        { "value": "theme", "label": "Same as the shop's headings" },
+        { "value": "inherit", "label": "Same as body text" }
+      ]
+    },
+    { "type": "checkbox", "id": "word_wrap", "label": "Let long names wrap", "default": false },
+    { "type": "checkbox", "id": "word_outline", "label": "Outline only", "default": false },
+    { "type": "header", "content": "Product photo" },
+    { "type": "image_picker", "id": "image", "label": "Override image (leave empty to use the product image)" },
+    { "type": "range", "id": "photo_width", "min": 40, "max": 140, "step": 2, "unit": "%", "label": "Width", "default": 116 },
+    { "type": "range", "id": "photo_pull2", "min": -400, "max": 0, "step": 5, "unit": "px", "label": "Overlap onto the name", "default": -25 },
+    { "type": "range", "id": "photo_shadow", "min": 0, "max": 60, "step": 2, "unit": "px", "label": "Drop shadow", "default": 30 },
+    {
+      "type": "select",
+      "id": "photo_overflow",
+      "label": "Let the photo run past the card edge",
+      "default": "hidden",
+      "options": [
+        { "value": "visible", "label": "Yes" },
+        { "value": "hidden", "label": "No" }
+      ]
+    },
+    { "type": "checkbox", "id": "enable_3d", "label": "3D movement on scroll and hover", "default": true },
+    { "type": "range", "id": "tilt2", "min": 0, "max": 20, "step": 1, "unit": "deg", "label": "Tilt", "default": 13 },
+    { "type": "range", "id": "float2", "min": 0, "max": 80, "step": 4, "unit": "px", "label": "Float", "default": 44 },
+    { "type": "range", "id": "depth", "min": 300, "max": 2000, "step": 100, "unit": "px", "label": "Perspective depth", "default": 1000 },
+    { "type": "header", "content": "Colour band behind the photo" },
+    { "type": "range", "id": "floor_height", "min": 0, "max": 80, "step": 5, "unit": "%", "label": "Height", "default": 35 },
+    { "type": "color", "id": "floor_color3", "label": "Colour", "default": "#f6eed8" },
+    { "type": "header", "content": "Price and options" },
+    { "type": "text", "id": "price_label", "label": "Price label", "default": "PRICE" },
+    { "type": "range", "id": "price_size2", "min": 14, "max": 64, "step": 2, "unit": "px", "label": "Price size", "default": 24 },
+    { "type": "checkbox", "id": "show_swatch_names", "label": "Show option names", "default": true },
+    { "type": "range", "id": "max_swatches", "min": 2, "max": 10, "step": 1, "label": "Most options to show", "default": 6 },
+    { "type": "range", "id": "swatch_size2", "min": 16, "max": 60, "step": 2, "unit": "px", "label": "Swatch size", "default": 26 },
+    { "type": "range", "id": "swatch_gap", "min": 6, "max": 32, "step": 2, "unit": "px", "label": "Swatch spacing", "default": 14 },
+    { "type": "color", "id": "swatch_color2", "label": "Swatch", "default": "#c95931" },
+    { "type": "color", "id": "swatch_text_color2", "label": "Swatch letter", "default": "#f2eee0" },
+    { "type": "color", "id": "swatch_active_color2", "label": "Selected ring", "default": "#f2eee0" },
+    { "type": "header", "content": "Quantity and buy bar" },
+    { "type": "checkbox", "id": "show_quantity", "label": "Show quantity", "default": true },
+    { "type": "text", "id": "quantity_label", "label": "Quantity label", "default": "Quantity" },
+    { "type": "text", "id": "button_label", "label": "Add to cart text", "default": "Add to cart" },
+    { "type": "checkbox", "id": "show_buy_it_now", "label": "Show Buy it now", "default": true },
+    { "type": "text", "id": "sold_out_label", "label": "Sold out text", "default": "Sold out" },
+    { "type": "range", "id": "btn_pad", "min": 6, "max": 40, "step": 1, "unit": "px", "label": "Button height", "default": 12 },
+    { "type": "range", "id": "btn_size", "min": 10, "max": 26, "step": 1, "unit": "px", "label": "Button text size", "default": 14 },
+    { "type": "range", "id": "button_gap", "min": 4, "max": 30, "step": 2, "unit": "px", "label": "Space between buttons", "default": 12 },
+    { "type": "range", "id": "buys_pad_bottom", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Space below the last button", "default": 8 },
+    { "type": "range", "id": "button_radius", "min": 0, "max": 60, "step": 2, "unit": "px", "label": "Button corner radius", "default": 40 },
+    { "type": "range", "id": "button_border_width", "min": 0, "max": 6, "step": 1, "unit": "px", "label": "Button border width", "default": 2 },
+    { "type": "range", "id": "button_shadow", "min": 0, "max": 14, "step": 1, "unit": "px", "label": "Button offset shadow", "default": 5 },
+    { "type": "header", "content": "Description" },
+    { "type": "checkbox", "id": "show_product_description", "label": "Show the product description under the card", "default": false },
+    { "type": "color", "id": "body_color", "label": "Description text colour", "default": "#28183c" },
+    { "type": "range", "id": "body_size", "min": 12, "max": 24, "step": 1, "unit": "px", "label": "Description size", "default": 16 },
+    { "type": "range", "id": "body_gap", "min": 0, "max": 80, "step": 4, "unit": "px", "label": "Space above description", "default": 32 },
+    { "type": "header", "content": "Colours" },
+    { "type": "color", "id": "page_color2", "label": "Page background", "default": "#c95931" },
+    { "type": "color", "id": "card_color2", "label": "Card", "default": "#524e97" },
+    { "type": "color", "id": "text_color2", "label": "Card text", "default": "#f2eee0" },
+    { "type": "color", "id": "word_color2", "label": "Name behind product", "default": "#f2eee0" },
+    { "type": "color", "id": "foot_color2", "label": "Price strip", "default": "#c95931" },
+    { "type": "color", "id": "foot_text_color2", "label": "Price strip text", "default": "#f2eee0" },
+    { "type": "color", "id": "button_color2", "label": "Button", "default": "#c95931" },
+    { "type": "color", "id": "button_text_color2", "label": "Button text", "default": "#f2eee0" },
+    { "type": "color", "id": "button_border_color2", "label": "Button border", "default": "#f2eee0" },
+    { "type": "color", "id": "button_shadow_color2", "label": "Button shadow", "default": "#e0272d" },
+    { "type": "header", "content": "Shape and spacing" },
+    { "type": "range", "id": "card_width", "min": 400, "max": 1200, "step": 20, "unit": "px", "label": "Card width", "default": 640 },
+    { "type": "range", "id": "radius", "min": 0, "max": 60, "step": 2, "unit": "px", "label": "Corner radius", "default": 28 },
+    { "type": "range", "id": "card_shadow", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Card shadow", "default": 10 },
+    { "type": "range", "id": "inner_pad", "min": 8, "max": 48, "step": 2, "unit": "px", "label": "Inner padding", "default": 22 },
+    { "type": "range", "id": "meta_size2", "min": 7, "max": 18, "step": 1, "unit": "px", "label": "Small text size", "default": 9 },
+    { "type": "range", "id": "padding_top", "min": 0, "max": 8, "step": 0.5, "unit": "rem", "label": "Space above", "default": 2 },
+    { "type": "range", "id": "padding_bottom", "min": 0, "max": 8, "step": 0.5, "unit": "rem", "label": "Space below", "default": 3 },
+    { "type": "range", "id": "side_pad", "min": 0, "max": 6, "step": 0.5, "unit": "rem", "label": "Side padding", "default": 1.5 },
+    { "type": "range", "id": "side_pad_mobile", "min": 0, "max": 3, "step": 0.5, "unit": "rem", "label": "Side padding on mobile", "default": 1 }
+  ],
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "pattern",
+      "name": "Background pattern",
+      "settings": [
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Pattern",
+          "default": "grid",
+          "options": [
+            { "value": "grid", "label": "Grid" },
+            { "value": "dots", "label": "Dots" },
+            { "value": "diagonal", "label": "Diagonal lines" },
+            { "value": "crosshatch", "label": "Crosshatch" },
+            { "value": "stripes", "label": "Stripes" }
+          ]
+        },
+        { "type": "color", "id": "color", "label": "Colour", "default": "#f2eee0" },
+        { "type": "range", "id": "size", "min": 6, "max": 80, "step": 2, "unit": "px", "label": "Scale", "default": 24 },
+        { "type": "range", "id": "weight", "min": 1, "max": 10, "step": 1, "unit": "px", "label": "Line thickness", "default": 2 },
+        { "type": "range", "id": "opacity", "min": 2, "max": 100, "step": 2, "unit": "%", "label": "Opacity", "default": 16 }
+      ]
+    },
+    {
+      "type": "badge",
+      "name": "Pill",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "60 PAGES" },
+        { "type": "color", "id": "color", "label": "Background", "default": "#28183c" },
+        { "type": "color", "id": "text_color", "label": "Text colour", "default": "#f2eee0" }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "Text",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading" },
+        { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Write what belongs here.</p>" },
+        { "type": "color", "id": "text_color", "label": "Text colour", "default": "#28183c" }
+      ]
+    },
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "range", "id": "width", "min": 20, "max": 100, "step": 5, "unit": "%", "label": "Width", "default": 100 }
+      ]
+    },
+    {
+      "type": "button",
+      "name": "Button",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Text", "default": "Read more" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Product showcase" }]
+}
+{% endschema %}

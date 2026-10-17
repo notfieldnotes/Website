@@ -1,0 +1,361 @@
+{% comment %}
+  Scatter scroll - the shape field from scroll.locomotive.ca. A flat colour
+  band with rings, starbursts and your own notebooks scattered across it, each
+  drifting at its own speed as the page scrolls.
+
+  Every piece is a block, so you place them by eye: position, size, colour,
+  how fast it drifts, whether it spins, and where it links to.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+  assign items = section.blocks
+-%}
+
+<section class="dft" id="dft-{{ sid }}"
+  data-dft
+  data-drift="{{ s.drift }}"
+  data-mobile-drift="{{ s.mobile_drift }}"
+  data-lag="{{ s.lag }}"
+  style="--dft-bg:{{ s.background_color }};--dft-ink:{{ s.text_color }};--dft-h:{{ s.height }}vh;--dft-hm:{{ s.mobile_height }}vh;--dft-head:{{ s.heading_size }}vw;">
+
+  {%- if s.background_image != blank -%}
+    <div class="dft__bg" aria-hidden="true"
+      style="background-image:url({{ s.background_image | image_url: width: 2400 }});"></div>
+  {%- endif -%}
+
+  <div class="dft__field">
+    {%- for b in items -%}
+      {%- liquid
+        assign i = b.settings
+        assign mobile_size = i.size | times: s.mobile_scale | divided_by: 100.0
+        assign speed = i.speed | divided_by: 100.0
+
+        assign hole = i.hole
+        assign pattern = 'solid'
+        case i.shape
+          when 'ring'
+            assign pattern = 'solid'
+          when 'thick_ring'
+            assign pattern = 'solid'
+          when 'dot'
+            assign pattern = 'solid'
+            assign hole = 0
+          when 'dashed'
+            assign pattern = 'dashes'
+          when 'starburst'
+            assign pattern = 'spokes'
+        endcase
+      -%}
+
+      <div class="dft__item{% if i.hide_on_mobile %} dft__item--desk{% endif %}{% if i.front %} dft__item--front{% endif %}"
+        style="left:{{ i.x }}%;top:{{ i.y }}%;--w:{{ i.size }}%;--wm:{{ mobile_size }}%;"
+        {{ b.shopify_attributes }}>
+
+        <div class="dft__move" data-speed="{{ speed }}">
+          {%- if i.link != blank -%}<a class="dft__link" href="{{ i.link }}"{% if i.title != blank %} aria-label="{{ i.title | escape }}"{% endif %}>{%- endif -%}
+
+          {%- if b.type == 'notebook' and i.image != blank -%}
+            <div class="dft__spin" style="--rot:{{ i.rotation }}deg;{% if i.spin %}--spin:{{ i.spin_seconds }}s;{% endif %}">
+              {{ i.image | image_url: width: 1200 | image_tag:
+                loading: 'lazy',
+                alt: i.title,
+                class: 'dft__img',
+                widths: '200,400,600,900,1200' }}
+            </div>
+          {%- elsif b.type == 'shape' -%}
+            <div class="dft__spin" style="--rot:{{ i.rotation }}deg;{% if i.spin %}--spin:{{ i.spin_seconds }}s;{% endif %}">
+              <div class="dft__shape dft__shape--{{ pattern }}"
+                style="--c:{{ i.color }};--hole:{{ hole }}%;--hole-edge:{{ hole | plus: 1 }}%;"></div>
+            </div>
+          {%- endif -%}
+
+          {%- if i.link != blank -%}</a>{%- endif -%}
+        </div>
+      </div>
+    {%- endfor -%}
+  </div>
+
+  {%- if s.heading != blank or s.text != blank -%}
+    <div class="dft__words">
+      {%- if s.heading != blank -%}<h2 class="dft__heading">{{ s.heading }}</h2>{%- endif -%}
+      {%- if s.text != blank -%}<div class="dft__text">{{ s.text }}</div>{%- endif -%}
+    </div>
+  {%- endif -%}
+</section>
+
+{% comment %}
+  A plain style tag: the theme's stylesheet compiler rewrites masks and
+  conic gradients, which is the whole of how these shapes are drawn.
+{% endcomment %}
+<style>
+  #dft-{{ sid }} {
+    position: relative;
+    background: {{ s.background_color }};
+    color: {{ s.text_color }};
+    min-height: {{ s.height }}vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #dft-{{ sid }} .dft__bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+  }
+  #dft-{{ sid }} .dft__field {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+  #dft-{{ sid }} .dft__item {
+    position: absolute;
+    width: var(--w);
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+  #dft-{{ sid }} .dft__item--front { z-index: 3; }
+  #dft-{{ sid }} .dft__move { will-change: transform; }
+  #dft-{{ sid }} .dft__spin {
+    transform: rotate(var(--rot, 0deg));
+    animation: dft-spin var(--spin, 0s) linear infinite;
+  }
+  #dft-{{ sid }} .dft__link { display: block; pointer-events: auto; }
+
+  #dft-{{ sid }} .dft__img {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    max-width: none !important;
+  }
+
+  #dft-{{ sid }} .dft__shape {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: var(--c);
+    -webkit-mask: radial-gradient(circle at 50% 50%, transparent var(--hole), #000 var(--hole-edge));
+    mask: radial-gradient(circle at 50% 50%, transparent var(--hole), #000 var(--hole-edge));
+  }
+  #dft-{{ sid }} .dft__shape--spokes {
+    background: repeating-conic-gradient(from 0deg at 50% 50%, var(--c) 0deg 11deg, transparent 11deg 22.5deg);
+  }
+  #dft-{{ sid }} .dft__shape--dashes {
+    background: repeating-conic-gradient(from 20deg at 50% 50%, var(--c) 0deg 62deg, transparent 62deg 90deg);
+  }
+
+  #dft-{{ sid }} .dft__words {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 2rem clamp(1rem, 5vw, 4rem);
+    max-width: 46rem;
+    pointer-events: none;
+  }
+  #dft-{{ sid }} .dft__heading {
+    margin: 0 0 .3em;
+    font-family: var(--heading-font-stack);
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: .95;
+    font-size: clamp(1.8rem, {{ s.heading_size }}vw, 5rem);
+  }
+  #dft-{{ sid }} .dft__text { font-size: clamp(.9rem, 1.2vw, 1.1rem); line-height: 1.5; }
+  #dft-{{ sid }} .dft__text a { pointer-events: auto; text-decoration: underline; }
+
+  @keyframes dft-spin { to { transform: rotate(calc(var(--rot, 0deg) + 360deg)); } }
+
+  @media (max-width: 749px) {
+    #dft-{{ sid }} { min-height: {{ s.mobile_height }}vh; }
+    #dft-{{ sid }} .dft__item { width: var(--wm); }
+    #dft-{{ sid }} .dft__item--desk { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #dft-{{ sid }} .dft__spin { animation: none; }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('dft-{{ sid }}');
+    if (!host) return;
+
+    var movers = [].slice.call(host.querySelectorAll('[data-speed]'));
+    if (!movers.length) return;
+
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+
+    var rafId = null;
+    var visible = false;
+
+    function strength() {
+      var narrow = window.innerWidth && window.innerWidth < 750;
+      var v = narrow ? +host.dataset.mobileDrift : +host.dataset.drift;
+      return (isNaN(v) ? 8 : v) / 10;
+    }
+
+    /* 0 locks a piece to the scroll, higher lets it trail and keep gliding
+       after the scroll stops - the way the reference behaves */
+    function ease() {
+      var L = parseFloat(host.dataset.lag);
+      if (isNaN(L)) L = 6;
+      if (L <= 0) return 1;
+      /* each step up roughly doubles how long a piece takes to settle, so the
+         higher numbers give the long multi-second glide the reference has */
+      return Math.max(0.008, Math.pow(0.62, L));
+    }
+
+    var at = [];
+    var lastT = 0;
+
+    function place(dt) {
+      /* the preview pane reports a zero viewport while it is hidden */
+      var vh = window.innerHeight;
+      if (!vh) return false;
+
+      var r = host.getBoundingClientRect();
+      var middle = r.top + r.height / 2 - vh / 2;
+      var k = strength();
+      var a = dt ? 1 - Math.pow(1 - ease(), dt * 60) : 1;
+      var moving = false;
+
+      for (var i = 0; i < movers.length; i++) {
+        var sp = parseFloat(movers[i].dataset.speed) || 0;
+        var want = -middle * sp * k;
+
+        if (at[i] === undefined) at[i] = want;
+        var d = want - at[i];
+        if (Math.abs(d) < 0.03) at[i] = want; else { at[i] += d * a; moving = true; }
+
+        movers[i].style.transform = 'translate3d(0,' + at[i].toFixed(2) + 'px,0)';
+      }
+      return moving;
+    }
+
+    function frame(t) {
+      if (!host.isConnected) { stop(); return; }
+      if (!lastT) lastT = t;
+      var dt = Math.min(64, t - lastT) / 1000;
+      lastT = t;
+      place(dt);
+      rafId = requestAnimationFrame(frame);
+    }
+
+    function run() {
+      if (rafId || !host.isConnected) return;
+      lastT = 0;
+      rafId = requestAnimationFrame(frame);
+    }
+    function stop() {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        visible = entries[0].isIntersecting;
+        if (visible) run(); else { stop(); }
+      }, { rootMargin: '150px 0px' }).observe(host);
+    } else {
+      run();
+    }
+
+    place(0);
+    window.addEventListener('resize', function () { place(0); });
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && '{{ sid }}'.indexOf(e.detail.sectionId) !== -1) stop();
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Scatter scroll",
+  "tag": "section",
+  "class": "section-scatter-scroll",
+  "settings": [
+    { "type": "paragraph", "content": "A flat colour band with shapes and notebooks scattered across it, each drifting at its own speed as the page scrolls. Add a block for every piece and place it by eye." },
+    { "type": "range", "id": "height", "label": "Height", "min": 40, "max": 160, "step": 5, "unit": "vh", "default": 90 },
+    { "type": "range", "id": "drift", "label": "How far things drift", "min": 0, "max": 20, "step": 1, "default": 8 },
+    { "type": "range", "id": "lag", "label": "How loosely they follow", "min": 0, "max": 10, "step": 1, "default": 6, "info": "0 locks everything to the scroll. Higher lets each piece trail behind and keep gliding after you stop, the way the reference does." },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#202ded" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "header", "content": "Words over the top" },
+    { "type": "text", "id": "heading", "label": "Heading" },
+    { "type": "range", "id": "heading_size", "label": "Heading size", "min": 2, "max": 10, "step": 1, "unit": "vw", "default": 5 },
+    { "type": "richtext", "id": "text", "label": "Text" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#ffffff" },
+    { "type": "header", "content": "On phones" },
+    { "type": "range", "id": "mobile_height", "label": "Height on phones", "min": 30, "max": 140, "step": 5, "unit": "vh", "default": 70 },
+    { "type": "range", "id": "mobile_scale", "label": "Size of everything on phones", "min": 40, "max": 120, "step": 5, "unit": "%", "default": 70 },
+    { "type": "range", "id": "mobile_drift", "label": "How far things drift on phones", "min": 0, "max": 20, "step": 1, "default": 5 }
+  ],
+  "blocks": [
+    {
+      "type": "shape",
+      "name": "Shape",
+      "settings": [
+        { "type": "select", "id": "shape", "label": "Shape", "default": "ring", "options": [
+          { "value": "ring", "label": "Ring" },
+          { "value": "thick_ring", "label": "Thick ring" },
+          { "value": "dot", "label": "Solid dot" },
+          { "value": "dashed", "label": "Dashed ring" },
+          { "value": "starburst", "label": "Starburst" }
+        ] },
+        { "type": "range", "id": "hole", "label": "Hole in the middle", "min": 0, "max": 90, "step": 2, "unit": "%", "default": 60, "info": "Ignored by the solid dot." },
+        { "type": "color", "id": "color", "label": "Colour", "default": "#ffffff" },
+        { "type": "header", "content": "Where it sits" },
+        { "type": "range", "id": "x", "label": "Across", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "y", "label": "Down", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "size", "label": "Size", "min": 4, "max": 60, "step": 2, "unit": "%", "default": 18 },
+        { "type": "checkbox", "id": "front", "label": "In front of the words", "default": false },
+        { "type": "checkbox", "id": "hide_on_mobile", "label": "Hide on phones", "default": false },
+        { "type": "header", "content": "How it moves" },
+        { "type": "range", "id": "speed", "label": "Drift", "min": -10, "max": 10, "step": 1, "default": 3, "info": "Minus drifts the other way. Mix the numbers up so nothing moves together." },
+        { "type": "range", "id": "rotation", "label": "Angle", "min": -180, "max": 180, "step": 15, "unit": "°", "default": 0 },
+        { "type": "checkbox", "id": "spin", "label": "Spin it", "default": false },
+        { "type": "range", "id": "spin_seconds", "label": "One turn takes", "min": 2, "max": 60, "step": 2, "unit": "s", "default": 20 },
+        { "type": "header", "content": "Link" },
+        { "type": "url", "id": "link", "label": "Links to" },
+        { "type": "text", "id": "title", "label": "Describe it", "info": "Read out by screen readers when it links somewhere." }
+      ]
+    },
+    {
+      "type": "notebook",
+      "name": "Notebook",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "A cut-out PNG sits best on the colour." },
+        { "type": "header", "content": "Where it sits" },
+        { "type": "range", "id": "x", "label": "Across", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "y", "label": "Down", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "size", "label": "Size", "min": 4, "max": 60, "step": 2, "unit": "%", "default": 18 },
+        { "type": "checkbox", "id": "front", "label": "In front of the words", "default": false },
+        { "type": "checkbox", "id": "hide_on_mobile", "label": "Hide on phones", "default": false },
+        { "type": "header", "content": "How it moves" },
+        { "type": "range", "id": "speed", "label": "Drift", "min": -10, "max": 10, "step": 1, "default": 4 },
+        { "type": "range", "id": "rotation", "label": "Angle", "min": -180, "max": 180, "step": 15, "unit": "°", "default": 0 },
+        { "type": "checkbox", "id": "spin", "label": "Spin it", "default": false },
+        { "type": "range", "id": "spin_seconds", "label": "One turn takes", "min": 2, "max": 60, "step": 2, "unit": "s", "default": 20 },
+        { "type": "header", "content": "Link" },
+        { "type": "url", "id": "link", "label": "Links to" },
+        { "type": "text", "id": "title", "label": "Name of the notebook", "info": "Used as the image description." }
+      ]
+    }
+  ],
+  "max_blocks": 16,
+  "presets": [
+    {
+      "name": "Scatter scroll",
+      "blocks": [
+        { "type": "shape", "settings": { "shape": "dashed", "hole": 72, "color": "#ffffff", "x": 2, "y": 46, "size": 20, "speed": 2, "rotation": 0 } },
+        { "type": "shape", "settings": { "shape": "thick_ring", "hole": 28, "color": "#111111", "x": 24, "y": 74, "size": 24, "speed": 6, "rotation": 0 } },
+        { "type": "shape", "settings": { "shape": "ring", "hole": 56, "color": "#ffffff", "x": 44, "y": 44, "size": 24, "speed": 1, "rotation": 0 } },
+        { "type": "shape", "settings": { "shape": "thick_ring", "hole": 54, "color": "#eb5a46", "x": 68, "y": 20, "size": 22, "speed": 9, "rotation": 0 } },
+        { "type": "shape", "settings": { "shape": "starburst", "hole": 6, "color": "#ffffff", "x": 92, "y": 30, "size": 20, "speed": 4, "rotation": 0, "spin": true, "spin_seconds": 40 } }
+      ]
+    }
+  ]
+}
+{% endschema %}

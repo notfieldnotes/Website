@@ -1,0 +1,417 @@
+{% comment %}
+  Slide menu - the menu from cvnt.in. Pressing MENU slides the whole page off
+  to the right on a tilt, revealing the menu underneath. Each item carries its
+  own colour or picture, which fades in behind the menu as you run down the
+  list.
+
+  Add it once to the Header group and it works on every page.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+  assign items = section.blocks | where: 'type', 'link'
+-%}
+
+<div class="nfnm" id="nfnm-{{ sid }}" data-nfnm
+  data-selector="{{ s.trigger_selector | escape }}"
+  data-shift="{{ s.shift }}"
+  data-shift-mobile="{{ s.shift_mobile }}"
+  data-tilt="{{ s.tilt }}"
+  data-scale="{{ s.page_scale }}"
+  data-radius="{{ s.page_radius }}"
+  data-speed="{{ s.speed }}">
+
+  <div class="nfnm__panel" data-panel>
+    {%- if s.background_image != blank -%}
+      <div class="nfnm__base" style="background-image:url({{ s.background_image | image_url: width: 2400 }});"></div>
+    {%- endif -%}
+
+    {%- comment -%} one washed layer per item, faded in on hover {%- endcomment -%}
+    {%- for b in items -%}
+      {%- assign i = b.settings -%}
+      <div class="nfnm__wash" data-wash="{{ forloop.index0 }}"
+        style="background-color:{{ i.background_color }};{% if i.background_image != blank %}background-image:url({{ i.background_image | image_url: width: 2000 }});{% endif %}"></div>
+    {%- endfor -%}
+
+    <nav class="nfnm__nav" aria-label="{{ s.aria_label | escape }}">
+      {%- for b in items -%}
+        {%- assign i = b.settings -%}
+        <a class="nfnm__item{% if i.space_above %} is-spaced{% endif %}"
+          href="{{ i.link | default: '#' }}"
+          data-item="{{ forloop.index0 }}"
+          style="{% if i.text_color != blank %}--nfnm-ink:{{ i.text_color }};{% endif %}"
+          {{ b.shopify_attributes }}>{{ i.label }}</a>
+      {%- endfor -%}
+    </nav>
+  </div>
+
+  <button class="nfnm__btn" type="button" data-toggle aria-expanded="false">
+    <span class="nfnm__x" aria-hidden="true"></span>
+    <span class="nfnm__btn-label">{{ s.button_label }}</span>
+  </button>
+</div>
+
+<style>
+  /* the page itself lives in this wrapper, built once by the script below */
+  .nfn-slidewrap {
+    position: relative;
+    z-index: 2;
+    transform-origin: 50% 50%;
+    transition: transform {{ s.speed }}ms cubic-bezier(.76, 0, .24, 1),
+                border-radius {{ s.speed }}ms cubic-bezier(.76, 0, .24, 1);
+    background: {{ s.page_backing }};
+  }
+  /* while the menu is open the page becomes a screen-sized card, otherwise
+     rotating a page tens of thousands of pixels tall swings what you are
+     looking at right off the screen */
+  .nfn-slidewrap.is-card {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: {{ s.page_radius }}px;
+    box-shadow: 0 40px 120px rgba(0,0,0,.45);
+  }
+  body.nfnm-open { overflow: hidden; }
+
+  #nfnm-{{ sid }} .nfnm__panel {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    background: {{ s.background_color }};
+    visibility: hidden;
+    overflow: hidden;
+  }
+  body.nfnm-open #nfnm-{{ sid }} .nfnm__panel { visibility: visible; }
+
+  #nfnm-{{ sid }} .nfnm__base,
+  #nfnm-{{ sid }} .nfnm__wash {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    /* anchored, not centred: on a narrow screen a centred picture crops its
+       own edges away and the artwork disappears off the side */
+    background-position: {{ s.background_position }};
+  }
+  #nfnm-{{ sid }} .nfnm__wash {
+    opacity: 0;
+    transition: opacity {{ s.wash_speed }}ms ease;
+  }
+  #nfnm-{{ sid }} .nfnm__wash.is-on { opacity: 1; }
+
+  #nfnm-{{ sid }} .nfnm__nav {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: {{ s.side_space }}vw;
+    padding-right: 2rem;
+    max-height: 100svh;
+    overflow-y: auto;
+  }
+  #nfnm-{{ sid }} .nfnm__item {
+    color: var(--nfnm-ink, {{ s.text_color }});
+    text-decoration: none;
+    font-family: var(--main-font-stack);
+    font-weight: 500;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    font-size: clamp(1.7rem, {{ s.item_size }}vw, 5rem);
+    opacity: .82;
+    transform: translateX(-12px);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  #nfnm-{{ sid }} .nfnm__item.is-spaced { margin-top: .7em; }
+  #nfnm-{{ sid }} .nfnm__item:hover,
+  #nfnm-{{ sid }} .nfnm__item:focus-visible { opacity: 1; }
+  body.nfnm-open #nfnm-{{ sid }} .nfnm__item { transform: translateX(0); opacity: .82; }
+  body.nfnm-open #nfnm-{{ sid }} .nfnm__item:hover { opacity: 1; }
+
+  #nfnm-{{ sid }} .nfnm__btn {
+    position: fixed;
+    z-index: 5;
+    {{ s.button_corner }}
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+    padding: .35rem .5rem;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: {{ s.button_color }};
+    font-family: var(--heading-font-stack);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: {{ s.button_size }}px;
+  }
+  #nfnm-{{ sid }} .nfnm__btn-label {
+    border: 2px solid currentColor;
+    padding: .1em .35em;
+    line-height: 1;
+  }
+  /* the cross draws itself, and is only there once the menu is open */
+  #nfnm-{{ sid }} .nfnm__x {
+    position: relative;
+    width: 1em;
+    height: 1em;
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+  #nfnm-{{ sid }} .nfnm__x::before,
+  #nfnm-{{ sid }} .nfnm__x::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  #nfnm-{{ sid }} .nfnm__x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+  body.nfnm-open #nfnm-{{ sid }} .nfnm__x { opacity: 1; }
+  body.nfnm-open #nfnm-{{ sid }} .nfnm__btn { color: {{ s.button_open_color }}; }
+
+  @media (max-width: 749px) {
+    #nfnm-{{ sid }} .nfnm__nav { padding-left: {{ s.side_space_mobile }}vw; }
+    #nfnm-{{ sid }} .nfnm__item { font-size: clamp(1.4rem, {{ s.item_size_mobile }}vw, 3rem); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nfn-slidewrap { transition: none; }
+    #nfnm-{{ sid }} .nfnm__wash { transition: none; }
+  }
+</style>
+
+<script>
+  (function () {
+    /* This section sits in the header, so when it first runs the rest of the
+       page has not been parsed yet. Building the wrapper now would leave the
+       main content and footer outside it. Wait for the document instead. */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot, { once: true });
+    } else {
+      boot();
+    }
+
+    function boot() {
+    var KEY = '__nfnSlideMenu';
+    var ID = 'nfnm-{{ sid }}';
+    var host = document.getElementById(ID);
+    if (!host) return;
+
+    if (window[KEY] && window[KEY].id !== ID) window[KEY].destroy();
+
+    var panel = host.querySelector('[data-panel]');
+    var washes = [].slice.call(host.querySelectorAll('[data-wash]'));
+    var links = [].slice.call(host.querySelectorAll('[data-item]'));
+    var btn = host.querySelector('[data-toggle]');
+
+    var SHIFT = +host.dataset.shift || 26;
+    var SHIFT_M = +host.dataset.shiftMobile || 62;
+    var TILT = +host.dataset.tilt;
+    var SCALE = (+host.dataset.scale || 88) / 100;
+    var SPEED = +host.dataset.speed || 800;
+
+    /* everything on the page goes in one wrapper, so it can slide as a piece.
+       The menu itself has to stay outside it. */
+    var wrap = document.querySelector('.nfn-slidewrap');
+    var inner = document.querySelector('.nfn-slideinner');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'nfn-slidewrap';
+      inner = document.createElement('div');
+      inner.className = 'nfn-slideinner';
+      wrap.appendChild(inner);
+      var keep = [];
+      [].slice.call(document.body.children).forEach(function (el) {
+        if (el === host) return;
+        if (el.tagName === 'SCRIPT' || el.tagName === 'TEMPLATE' || el.tagName === 'LINK') return;
+        keep.push(el);
+      });
+      document.body.insertBefore(wrap, keep[0] || null);
+      keep.forEach(function (el) { inner.appendChild(el); });
+    }
+    /* the menu must not sit inside the thing that moves, and must come after
+       it so its own stacking is predictable */
+    document.body.appendChild(host);
+
+    var open = false;
+
+    function narrow() { return (window.innerWidth || document.documentElement.clientWidth) < 750; }
+
+    var heldY = 0;
+
+    function apply() {
+      if (open) {
+        var x = narrow() ? SHIFT_M : SHIFT;
+        wrap.style.height = (window.innerHeight || document.documentElement.clientHeight) + 'px';
+        wrap.style.transform = 'translateX(' + x + 'vw) rotate(' + TILT + 'deg) scale(' + SCALE + ')';
+      } else {
+        /* none, not translateX(0) - any transform here would break every
+           fixed element on the page while the menu is shut */
+        wrap.style.transform = 'none';
+      }
+    }
+
+    function card(on) {
+      if (on) {
+        heldY = window.scrollY || window.pageYOffset || 0;
+        inner.style.marginTop = (-heldY) + 'px';
+        wrap.classList.add('is-card');
+      } else {
+        wrap.classList.remove('is-card');
+        wrap.style.height = '';
+        inner.style.marginTop = '';
+        window.scrollTo(0, heldY);
+      }
+    }
+
+    function lightOne(n) {
+      for (var i = 0; i < washes.length; i++) washes[i].classList.toggle('is-on', i === n);
+    }
+
+    var started = false;
+
+    function setOpen(next) {
+      open = next;
+      document.body.classList.toggle('nfnm-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+
+      if (open) {
+        card(true);
+        /* let the card settle for a frame so the slide animates from where
+           the page actually is */
+        requestAnimationFrame(apply);
+      } else {
+        apply();
+        if (started) setTimeout(function () { if (!open) card(false); }, SPEED);
+        lightOne(-1);
+      }
+      started = true;
+    }
+
+    btn.addEventListener('click', function () { setOpen(!open); });
+
+    links.forEach(function (a, i) {
+      a.addEventListener('mouseenter', function () { lightOne(i); });
+      a.addEventListener('focus', function () { lightOne(i); });
+    });
+    host.querySelector('.nfnm__nav').addEventListener('mouseleave', function () { lightOne(-1); });
+
+    /* the shoved-aside page closes the menu when you click it */
+    function onWrapClick(e) { if (open) { e.preventDefault(); e.stopPropagation(); setOpen(false); } }
+    wrap.addEventListener('click', onWrapClick, true);
+
+    function onKey(e) { if (e.key === 'Escape' && open) setOpen(false); }
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', apply);
+
+    /* anything the merchant already uses as a menu button opens this too */
+    var sel = (host.dataset.selector || '').trim();
+    var extra = [];
+    if (sel) {
+      try {
+        [].slice.call(document.querySelectorAll(sel)).forEach(function (el) {
+          if (el === btn || host.contains(el)) return;
+          var h = function (e) { e.preventDefault(); e.stopPropagation(); setOpen(!open); };
+          el.addEventListener('click', h, true);
+          extra.push([el, h]);
+        });
+      } catch (err) { /* a bad selector should not take the page down */ }
+    }
+
+    setOpen(false);
+
+    function destroy() {
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', apply);
+      wrap.removeEventListener('click', onWrapClick, true);
+      extra.forEach(function (p) { p[0].removeEventListener('click', p[1], true); });
+      document.body.classList.remove('nfnm-open');
+      wrap.style.transform = 'none';
+    }
+    window[KEY] = { id: ID, destroy: destroy, open: function () { setOpen(true); }, close: function () { setOpen(false); } };
+
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && ID.indexOf(e.detail.sectionId) !== -1) {
+        destroy();
+        if (window[KEY] && window[KEY].id === ID) window[KEY] = null;
+      }
+    });
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Slide menu",
+  "tag": "div",
+  "class": "section-slide-menu",
+  "settings": [
+    { "type": "paragraph", "content": "Pressing MENU slides the page off to the right on a tilt and shows this menu underneath. Add it once to the Header group so it works on every page." },
+    { "type": "header", "content": "The MENU button" },
+    { "type": "text", "id": "button_label", "label": "Button text", "default": "MENU" },
+    { "type": "select", "id": "button_corner", "label": "Where it sits", "default": "top:1.2rem;left:1.2rem;", "options": [
+      { "value": "top:1.2rem;left:1.2rem;", "label": "Top left" },
+      { "value": "top:1.2rem;right:1.2rem;", "label": "Top right" },
+      { "value": "bottom:1.2rem;left:1.2rem;", "label": "Bottom left" },
+      { "value": "bottom:1.2rem;right:1.2rem;", "label": "Bottom right" }
+    ] },
+    { "type": "range", "id": "button_size", "label": "Button size", "min": 10, "max": 28, "step": 1, "unit": "px", "default": 15 },
+    { "type": "color", "id": "button_color", "label": "Button, menu shut", "default": "#f1e9d4" },
+    { "type": "color", "id": "button_open_color", "label": "Button, menu open", "default": "#f1e9d4" },
+    { "type": "text", "id": "trigger_selector", "label": "Other buttons that open it", "default": "[data-nfn-menu]", "info": "CSS selectors, separated by commas. Leave as it is unless you know what to put here." },
+    { "type": "header", "content": "How the page moves" },
+    { "type": "range", "id": "shift", "label": "How far the page slides", "min": 10, "max": 70, "step": 2, "unit": "%", "default": 26 },
+    { "type": "range", "id": "shift_mobile", "label": "How far on phones", "min": 20, "max": 90, "step": 2, "unit": "%", "default": 62 },
+    { "type": "range", "id": "tilt", "label": "Tilt", "min": -15, "max": 15, "step": 1, "unit": "deg", "default": -7 },
+    { "type": "range", "id": "page_scale", "label": "Page shrinks to", "min": 70, "max": 100, "step": 2, "unit": "%", "default": 88 },
+    { "type": "range", "id": "page_radius", "label": "Page corners", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "speed", "label": "Slide speed", "min": 200, "max": 1600, "step": 50, "unit": "ms", "default": 800 },
+    { "type": "color", "id": "page_backing", "label": "Behind the page", "default": "#28183c", "info": "Seen at the tilted edges of the page." },
+    { "type": "header", "content": "The menu" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#524e97" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "select", "id": "background_position", "label": "Where the picture sits", "default": "left bottom", "options": [
+      { "value": "left bottom", "label": "Bottom left" },
+      { "value": "center bottom", "label": "Bottom centre" },
+      { "value": "right bottom", "label": "Bottom right" },
+      { "value": "left top", "label": "Top left" },
+      { "value": "center", "label": "Middle" },
+      { "value": "right center", "label": "Right" }
+    ], "info": "The picture always fills the screen, so this is the corner that is never cropped away." },
+    { "type": "color", "id": "text_color", "label": "Menu text", "default": "#111111" },
+    { "type": "range", "id": "item_size", "label": "Menu text size", "min": 2, "max": 8, "step": 1, "unit": "vw", "default": 4 },
+    { "type": "range", "id": "item_size_mobile", "label": "Menu text size on phones", "min": 4, "max": 14, "step": 1, "unit": "vw", "default": 8 },
+    { "type": "range", "id": "side_space", "label": "Space on the left", "min": 2, "max": 30, "step": 1, "unit": "vw", "default": 6 },
+    { "type": "range", "id": "side_space_mobile", "label": "Space on the left, phones", "min": 2, "max": 30, "step": 1, "unit": "vw", "default": 8 },
+    { "type": "range", "id": "wash_speed", "label": "Colour change speed", "min": 100, "max": 1200, "step": 50, "unit": "ms", "default": 500 },
+    { "type": "text", "id": "aria_label", "label": "Name for screen readers", "default": "Main menu" }
+  ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Menu item",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Text", "default": "Shop" },
+        { "type": "url", "id": "link", "label": "Links to" },
+        { "type": "checkbox", "id": "space_above", "label": "Start a new group", "default": false, "info": "Adds a gap above it, the way the reference breaks its list into groups." },
+        { "type": "color", "id": "background_color", "label": "Background when hovered", "default": "#c95931" },
+        { "type": "image_picker", "id": "background_image", "label": "Picture when hovered" },
+        { "type": "color", "id": "text_color", "label": "Text colour for this one" }
+      ]
+    }
+  ],
+  "max_blocks": 20,
+  "enabled_on": { "groups": ["header", "footer"] }
+}
+{% endschema %}
