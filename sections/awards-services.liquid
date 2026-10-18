@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter+Tight:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-<section class="aws" id="aws-{{ sid }}" data-aws
+<section class="aws" id="aws-{{ sid }}" data-aws data-pin="{{ s.zoom_length }}"
   style="--aws-dark:{{ s.dark_color }};--aws-light:{{ s.light_color }};--aws-cream:{{ s.cream_color }};--aws-ink:{{ s.ink_color }};--aws-gold:{{ s.gold_color }};--aws-pin:{{ s.zoom_length }}vh;--aws-sticker:{{ s.sticker_color }};--aws-line:{{ s.line_color }};--aws-line-o:{{ s.line_strength | divided_by: 100.0 }};">
 
   {%- comment -%} 1. the globe {%- endcomment -%}
@@ -175,8 +175,6 @@
   /* ---------- 1. globe ---------- */
   #aws-{{ sid }} .aws__zoom { position: relative; background: var(--aws-dark); color: var(--aws-light); }
   #aws-{{ sid }} .aws__stage { position: relative; height: 100vh; overflow: hidden; }
-  #aws-{{ sid }}[data-aws-live] .aws__zoom { height: calc(100vh + var(--aws-pin)); }
-  #aws-{{ sid }}[data-aws-live] .aws__stage { position: sticky; top: 0; }
 
   #aws-{{ sid }} .aws__top { position: absolute; left: 5vw; right: 5vw; top: 8vh; display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; z-index: 3; }
   #aws-{{ sid }} .aws__awarded { margin: 0; color: inherit; font-family: 'Bebas Neue', var(--font-heading-family, sans-serif); font-weight: 400; font-size: clamp(2.4rem, 4.6vw, 5rem); line-height: .9; letter-spacing: .005em; }
@@ -225,6 +223,7 @@
   }
 
   #aws-{{ sid }} .aws__rows { position: relative; }
+  #aws-{{ sid }}[data-aws-live] .aws__row { position: relative; top: auto; }
   #aws-{{ sid }} .aws__row {
     position: sticky; top: 10vh;
     display: grid; grid-template-columns: 1fr; gap: 1.6rem;
@@ -402,6 +401,7 @@
       var top = host.querySelector('[data-aws-top]');
       var iris = host.querySelector('[data-aws-iris]');
       var globe = host.querySelector('.aws__globe');
+      var stage = host.querySelector('.aws__stage');
 
       host.setAttribute('data-aws-live', '');
 
@@ -492,7 +492,9 @@
       var tl = gsap.timeline({
         defaults: { ease: 'none' },
         scrollTrigger: {
-          trigger: zoom, start: 'top top', end: 'bottom bottom', scrub: 0.6,
+          trigger: stage, start: 'top top',
+          end: function () { return '+=' + window.innerHeight * (parseFloat(host.dataset.pin) || 180) / 100; },
+          pin: true, anticipatePin: 1, scrub: 0.6, invalidateOnRefresh: true,
           onUpdate: function (self) { extra = -self.progress * 1.6; }
         }
       });
@@ -501,6 +503,23 @@
       tl.to(world, { opacity: 0, duration: 0.12 }, 0.52);
       tl.fromTo(iris, { clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(75% at 50% 50%)', duration: 0.42, ease: 'power2.in' }, 0.52);
       made.push(tl);
+
+      /* the service rows: each one pins near the top and the next slides up over
+         it, until the last row arrives - the stacking cards of the reference */
+      var rows = host.querySelectorAll('[data-aws-row]');
+      var lastRow = rows[rows.length - 1];
+      rows.forEach(function (row, i) {
+        if (i === rows.length - 1) return;
+        made.push(ScrollTrigger.create({
+          trigger: row,
+          start: 'top 10%',
+          endTrigger: lastRow,
+          end: 'top 10%',
+          pin: true,
+          pinSpacing: false,
+          invalidateOnRefresh: true
+        }));
+      });
 
       /* the sticker wobbles as the heading passes */
       var sticker = host.querySelector('[data-aws-sticker]');
@@ -529,7 +548,7 @@
       if (e.detail && e.detail.sectionId && '{{ section.id }}'.indexOf(e.detail.sectionId) !== -1) {
         if (rafId) cancelAnimationFrame(rafId);
         timers.forEach(clearTimeout);
-        made.forEach(function (a) { if (a.scrollTrigger) a.scrollTrigger.kill(); a.kill(); });
+        made.forEach(function (a) { if (a.scrollTrigger) a.scrollTrigger.kill(); if (a.kill) a.kill(); });
       }
     });
   })();
