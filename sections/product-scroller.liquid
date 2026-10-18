@@ -1,0 +1,173 @@
+{% comment %}
+  Product scroller - a row of product cards from a collection. On desktop the
+  section pins and the row slides sideways as the page scrolls down; on phones
+  (or with reduced motion) it is a plain swipeable row with snap.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id | replace: '_', '-'
+  assign list = s.collection.products
+  assign cards = s.limit
+-%}
+
+<section class="psc" id="psc-{{ sid }}"
+  data-psc
+  data-pin="{{ s.pin }}"
+  style="--psc-bg:{{ s.background_color }};--psc-ink:{{ s.text_color }};--psc-card:{{ s.card_color }};--psc-w:{{ s.card_width }}vw;--psc-wm:{{ s.mobile_card_width }}vw;--psc-gap:{{ s.gap }}px;--psc-r:{{ s.radius }}px;--psc-head:{{ s.heading_size }}vw;">
+
+  <div class="psc__sticky">
+    {%- if s.heading != blank -%}
+      <h2 class="psc__heading">{{ s.heading | escape }}</h2>
+    {%- endif -%}
+
+    <div class="psc__viewport" data-psc-viewport>
+      <ul class="psc__track" data-psc-track role="list">
+        {%- for p in list limit: cards -%}
+          <li class="psc__card">
+            <a class="psc__link" href="{{ p.url }}">
+              <div class="psc__media">
+                {%- if p.featured_image != blank -%}
+                  {{ p.featured_image | image_url: width: 900 | image_tag: loading: 'lazy', widths: '400, 600, 900', sizes: '(min-width: 750px) 30vw, 70vw', alt: p.featured_image.alt | default: p.title }}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'psc__placeholder' }}
+                {%- endif -%}
+              </div>
+              <div class="psc__info">
+                <span class="psc__name">{{ p.title | escape }}</span>
+                {%- if s.show_price -%}
+                  <span class="psc__price">
+                    {%- if p.compare_at_price > p.price -%}<s>{{ p.compare_at_price | money }}</s> {% endif -%}
+                    {{- p.price | money -}}
+                  </span>
+                {%- endif -%}
+              </div>
+            </a>
+          </li>
+        {%- else -%}
+          {%- for i in (1..4) -%}
+            <li class="psc__card">
+              <div class="psc__media">{{ 'product-' | append: i | placeholder_svg_tag: 'psc__placeholder' }}</div>
+              <div class="psc__info"><span class="psc__name">Product {{ i }}</span></div>
+            </li>
+          {%- endfor -%}
+        {%- endfor -%}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  #psc-{{ sid }} { position: relative; background: var(--psc-bg); color: var(--psc-ink); }
+  #psc-{{ sid }} * { box-sizing: border-box; }
+  #psc-{{ sid }} .psc__sticky { padding: {{ s.padding_top }}px 0 {{ s.padding_bottom }}px; overflow: hidden; }
+  #psc-{{ sid }} .psc__heading {
+    margin: 0 0 1.5rem; padding: 0 var(--psc-gap);
+    font-size: var(--psc-head); line-height: 1; color: inherit;
+  }
+  #psc-{{ sid }} .psc__viewport { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  #psc-{{ sid }} .psc__viewport::-webkit-scrollbar { display: none; }
+  #psc-{{ sid }} .psc__track { display: flex; gap: var(--psc-gap); margin: 0; padding: 0 var(--psc-gap); list-style: none; width: max-content; will-change: transform; }
+  #psc-{{ sid }} .psc__card { flex: 0 0 var(--psc-wm); scroll-snap-align: center; background: var(--psc-card); border-radius: var(--psc-r); overflow: hidden; }
+  #psc-{{ sid }} .psc__link { display: block; color: inherit; text-decoration: none; }
+  #psc-{{ sid }} .psc__media { aspect-ratio: {{ s.aspect }}; overflow: hidden; }
+  #psc-{{ sid }} .psc__media img,
+  #psc-{{ sid }} .psc__placeholder { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+  #psc-{{ sid }} .psc__link:hover .psc__media img { transform: scale(1.04); }
+  #psc-{{ sid }} .psc__info { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem 1.25rem; }
+  #psc-{{ sid }} .psc__name { font-weight: 600; }
+  #psc-{{ sid }} .psc__price s { opacity: .5; margin-right: .35em; }
+
+  @media (min-width: 750px) {
+    #psc-{{ sid }} .psc__card { flex-basis: var(--psc-w); }
+    #psc-{{ sid }}[data-psc-active] { height: var(--psc-h); }
+    #psc-{{ sid }}[data-psc-active] .psc__sticky { position: sticky; top: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+    #psc-{{ sid }}[data-psc-active] .psc__viewport { overflow: hidden; scroll-snap-type: none; }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('psc-{{ sid }}');
+    if (!host || host.dataset.pscReady) return;
+    host.dataset.pscReady = '1';
+
+    var viewport = host.querySelector('[data-psc-viewport]');
+    var track = host.querySelector('[data-psc-track]');
+    var desktop = window.matchMedia('(min-width: 750px)');
+    var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var travel = 0;
+    var ticking = false;
+
+    function active() { return host.dataset.pin === 'true' && desktop.matches && !calm.matches; }
+
+    function measure() {
+      if (!active()) {
+        host.removeAttribute('data-psc-active');
+        host.style.removeProperty('--psc-h');
+        track.style.transform = '';
+        return;
+      }
+      travel = Math.max(0, track.scrollWidth - viewport.clientWidth);
+      host.style.setProperty('--psc-h', (window.innerHeight + travel) + 'px');
+      host.setAttribute('data-psc-active', '');
+      update();
+    }
+
+    function update() {
+      ticking = false;
+      if (!host.hasAttribute('data-psc-active') || !travel) return;
+      var r = host.getBoundingClientRect();
+      var t = Math.min(1, Math.max(0, -r.top / travel));
+      track.style.transform = 'translate3d(' + (-t * travel).toFixed(1) + 'px,0,0)';
+    }
+
+    function onScroll() {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', measure);
+    window.addEventListener('load', measure);
+    desktop.addEventListener && desktop.addEventListener('change', measure);
+    measure();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Product scroller",
+  "tag": "section",
+  "class": "section-product-scroller",
+  "settings": [
+    { "type": "paragraph", "content": "A row of product cards. On desktop the section pins and the row slides sideways as you scroll down; on phones it is a swipeable row." },
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 2, "max": 24, "step": 1, "default": 10 },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Shop the notebooks" },
+    { "type": "range", "id": "heading_size", "label": "Heading size", "min": 3, "max": 12, "step": 1, "unit": "vw", "default": 6 },
+    { "type": "checkbox", "id": "show_price", "label": "Show price", "default": true },
+    { "type": "checkbox", "id": "pin", "label": "Scroll sideways with the page (desktop)", "default": true, "info": "Off gives a normal swipe or drag row on every screen." },
+    { "type": "header", "content": "Cards" },
+    { "type": "select", "id": "aspect", "label": "Image shape", "default": "4 / 5", "options": [
+      { "value": "1 / 1", "label": "Square" },
+      { "value": "4 / 5", "label": "Portrait" },
+      { "value": "3 / 4", "label": "Tall portrait" },
+      { "value": "4 / 3", "label": "Landscape" }
+    ] },
+    { "type": "range", "id": "card_width", "label": "Card width", "min": 20, "max": 60, "step": 2, "unit": "vw", "default": 30 },
+    { "type": "range", "id": "mobile_card_width", "label": "Card width on phones", "min": 50, "max": 90, "step": 2, "unit": "vw", "default": 72 },
+    { "type": "range", "id": "gap", "label": "Gap", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 24 },
+    { "type": "range", "id": "radius", "label": "Corner radius", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 0 },
+    { "type": "header", "content": "Colours" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#f4efe6" },
+    { "type": "color", "id": "card_color", "label": "Card", "default": "#ffffff" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#111111" },
+    { "type": "header", "content": "Spacing" },
+    { "type": "range", "id": "padding_top", "label": "Top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 60 },
+    { "type": "range", "id": "padding_bottom", "label": "Bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 60 }
+  ],
+  "presets": [
+    { "name": "Product scroller" }
+  ]
+}
+{% endschema %}

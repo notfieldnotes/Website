@@ -15,6 +15,7 @@ vendor code, and the per-page settings live in Shopify's own template JSON.
 
 | File | What it does |
 | --- | --- |
+| `product-scroller.liquid` | Row of product cards from a collection; pins and slides sideways with the page scroll on desktop, swipeable row on phones |
 | `product-showcase.liquid` | Product hero card: big photo in front with 3D drift, product name as a backdrop wordmark, price, swatches, quantity stepper and buy buttons |
 | `scrolling-logos.liquid` | Theme section, extended with a background image (opacity / size / position) and a square-corners option |
 | `slide-menu.liquid` | MENU slides the page away on a tilt; each item cross-fades its own background |
