@@ -15,6 +15,7 @@ vendor code, and the per-page settings live in Shopify's own template JSON.
 
 | File | What it does |
 | --- | --- |
+| `scroll-story.liquid` | The gsap.com/scroll opening: a paper plane loops through a pinned first scene and lands on the next line, a ball rides a glossy tube, then heading and buttons beside turning rings |
 | `scramble-text.liquid` | GSAP ScrambleText demo: a sentence built from parts that scramble into place one after another, each with its own characters, duration and flicker speed, with a blinking cursor at the end |
 | `product-view.liquid` | Pinned GSAP reel, after henrietta.wearetattoodigital.com: each product wipes its colour up, slides its name across as a huge wordmark, and swings the pack in and out |
 | `product-scroller.liquid` | Row of product cards from a collection; pins and slides sideways with the page scroll on desktop, swipeable row on phones |

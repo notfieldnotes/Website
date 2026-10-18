@@ -1,0 +1,354 @@
+{% comment %}
+  Scroll story - the three opening scenes of gsap.com/scroll (ScrollSmoother).
+
+    1. "It's like a gentle breeze": the scene pins while a paper plane flies
+       up from the bottom, loops with a thin trail behind it, and parks above
+       the next line of text as that line rises into place.
+    2. A thick, glossy tube squiggles down the page and a ball rides along it
+       as you scroll.
+    3. "It's smooth like butter": heading, text and two buttons beside a set
+       of segmented rings that turn as you scroll.
+
+  The tube and rings are drawn in SVG with gradients (the reference uses 3D
+  renders). GSAP ScrollTrigger + MotionPath over the real document scroll, so
+  it runs under the Smooth scroll section unchanged. Without JavaScript, or
+  with reduced motion, every scene shows still.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id | replace: '_', '-'
+-%}
+
+<section class="ssm" id="ssm-{{ sid }}" data-ssm
+  style="--ssm-bg:{{ s.background_color }};--ssm-ink:{{ s.text_color }};--ssm-accent:{{ s.accent_color }};--ssm-fly:{{ s.fly_length }}vh;--ssm-a:{{ s.color_a }};--ssm-b:{{ s.color_b }};">
+
+  {%- comment -%} scene 1: the pinned flight {%- endcomment -%}
+  <div class="ssm__fly" data-ssm-fly>
+    <div class="ssm__stage">
+      <div class="ssm__intro" data-ssm-intro>
+        {%- if s.kicker != blank -%}<p class="ssm__kicker">{{ s.kicker | escape }}</p>{%- endif -%}
+        <h2 class="ssm__h ssm__h--intro">{{ s.intro_heading | escape }}</h2>
+      </div>
+
+      <div class="ssm__guide" data-ssm-guide>
+        <p class="ssm__lead">{{ s.guide_text | escape }}</p>
+      </div>
+
+      <svg class="ssm__sky" data-ssm-sky aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="ssm-wa-{{ sid }}" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="var(--ssm-b)" style="stop-color:var(--ssm-b)"/>
+          </linearGradient>
+          <linearGradient id="ssm-wb-{{ sid }}" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--ssm-a)" style="stop-color:var(--ssm-a)"/>
+            <stop offset="1" stop-color="#2b5bd7"/>
+          </linearGradient>
+        </defs>
+        <path class="ssm__route" data-ssm-route d="M0,0"/>
+        <path class="ssm__trail" data-ssm-trail d="M0,0"/>
+        <path class="ssm__trail ssm__trail--2" data-ssm-trail d="M0,0"/>
+        {%- comment -%} the plane points along +x with its nose at 0,0 {%- endcomment -%}
+        <g class="ssm__plane" data-ssm-plane>
+          <polygon points="0,0 -66,-22 -44,-2" fill="url(#ssm-wa-{{ sid }})"/>
+          <polygon points="0,0 -44,-2 -62,24" fill="url(#ssm-wb-{{ sid }})"/>
+          <polygon points="0,0 -44,-2 -50,9" fill="#1b2a6b" opacity=".55"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  {%- comment -%} scene 2: the tube and the ball {%- endcomment -%}
+  <div class="ssm__tube" data-ssm-tube>
+    <svg class="ssm__tube-art" viewBox="0 0 1000 1000" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="ssm-tg-{{ sid }}" gradientUnits="userSpaceOnUse" x1="0" y1="250" x2="700" y2="1000">
+          <stop offset="0" style="stop-color:var(--ssm-a)"/>
+          <stop offset=".35" style="stop-color:var(--ssm-b)"/>
+          <stop offset=".6" style="stop-color:var(--ssm-a)"/>
+          <stop offset="1" style="stop-color:var(--ssm-b)"/>
+        </linearGradient>
+        <radialGradient id="ssm-ball-{{ sid }}" cx=".35" cy=".3" r=".75">
+          <stop offset="0" stop-color="#ffffff"/>
+          <stop offset=".45" stop-color="#fbe3fb"/>
+          <stop offset="1" style="stop-color:var(--ssm-b)"/>
+        </radialGradient>
+        <filter id="ssm-blur-{{ sid }}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="7"/></filter>
+      </defs>
+      <path class="ssm__tube-shade" d="M-80,380 C120,300 330,250 330,335 C330,425 70,420 70,515 C70,600 310,565 520,565 C710,565 700,670 565,765 C440,855 405,925 470,960"/>
+      <path class="ssm__tube-body" data-ssm-tube-path stroke="url(#ssm-tg-{{ sid }})" d="M-80,380 C120,300 330,250 330,335 C330,425 70,420 70,515 C70,600 310,565 520,565 C710,565 700,670 565,765 C440,855 405,925 470,960"/>
+      <path class="ssm__tube-gloss" filter="url(#ssm-blur-{{ sid }})" d="M-80,380 C120,300 330,250 330,335 C330,425 70,420 70,515 C70,600 310,565 520,565 C710,565 700,670 565,765 C440,855 405,925 470,960"/>
+      <circle class="ssm__ball" data-ssm-ball r="44" cx="70" cy="515" fill="url(#ssm-ball-{{ sid }})"/>
+    </svg>
+  </div>
+
+  {%- comment -%} scene 3: smooth like butter {%- endcomment -%}
+  <div class="ssm__butter" data-ssm-butter>
+    <div class="ssm__copy">
+      <h2 class="ssm__h">{{ s.butter_heading | escape }}</h2>
+      {%- if s.butter_text != blank -%}<div class="ssm__text">{{ s.butter_text }}</div>{%- endif -%}
+      <div class="ssm__buttons">
+        {%- if s.button1_label != blank -%}<a class="ssm__btn" href="{{ s.button1_link | default: '#' }}">{{ s.button1_label | escape }} <span aria-hidden="true">&rarr;</span></a>{%- endif -%}
+        {%- if s.button2_label != blank -%}<a class="ssm__btn ssm__btn--fill" href="{{ s.button2_link | default: '#' }}">{{ s.button2_label | escape }}</a>{%- endif -%}
+      </div>
+    </div>
+
+    <svg class="ssm__rings" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="ssm-rg-{{ sid }}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ffffff"/>
+          <stop offset=".4" style="stop-color:var(--ssm-a)"/>
+          <stop offset=".7" style="stop-color:var(--ssm-b)"/>
+          <stop offset="1" stop-color="#ffffff"/>
+        </linearGradient>
+      </defs>
+      {%- assign radii = '186,152,118,84,50' | split: ',' -%}
+      {%- assign dashes = '70 18,48 14,36 12,26 10,18 8' | split: ',' -%}
+      {%- for r in radii -%}
+        <g class="ssm__ring ssm__ring--{{ forloop.index }}" data-ssm-ring>
+          <circle cx="200" cy="200" r="{{ r }}" stroke="url(#ssm-rg-{{ sid }})" stroke-dasharray="{{ dashes[forloop.index0] }}"/>
+        </g>
+      {%- endfor -%}
+    </svg>
+  </div>
+</section>
+
+<style>
+  #ssm-{{ sid }} { position: relative; background: var(--ssm-bg); color: var(--ssm-ink); overflow: clip; }
+  #ssm-{{ sid }} * { box-sizing: border-box; }
+  #ssm-{{ sid }} .ssm__h {
+    margin: 0; color: inherit; font-family: var(--font-heading-family, inherit); font-weight: 600;
+    font-size: clamp(2.4rem, 5.4vw, 5.6rem); line-height: 1.02; letter-spacing: -.02em;
+  }
+  #ssm-{{ sid }} .ssm__kicker { margin: 0 0 .6rem; color: var(--ssm-accent); font-size: clamp(1rem, 1.4vw, 1.35rem); font-weight: 600; }
+  #ssm-{{ sid }} .ssm__lead { margin: 0; font-size: clamp(1.4rem, 2.4vw, 2.4rem); line-height: 1.15; letter-spacing: -.01em; }
+
+  /* scene 1 */
+  #ssm-{{ sid }} .ssm__fly { position: relative; }
+  #ssm-{{ sid }} .ssm__stage { position: relative; min-height: 100vh; padding: 18vh 5vw 10vh; }
+  #ssm-{{ sid }} .ssm__guide { margin: 30vh 0 0 auto; max-width: 30rem; }
+  #ssm-{{ sid }} .ssm__sky { display: none; }
+
+  #ssm-{{ sid }}[data-ssm-live] .ssm__fly { height: calc(100vh + var(--ssm-fly)); }
+  #ssm-{{ sid }}[data-ssm-live] .ssm__stage { position: sticky; top: 0; height: 100vh; min-height: 0; padding: 0; overflow: hidden; }
+  #ssm-{{ sid }}[data-ssm-live] .ssm__intro { position: absolute; left: 5vw; top: 18vh; right: 5vw; will-change: transform; }
+  #ssm-{{ sid }}[data-ssm-live] .ssm__guide { position: absolute; left: 58%; top: 47%; width: 34%; margin: 0; max-width: none; opacity: 0; will-change: transform; }
+  #ssm-{{ sid }}[data-ssm-live] .ssm__sky { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #ssm-{{ sid }} .ssm__route { fill: none; stroke: none; }
+  #ssm-{{ sid }} .ssm__trail { fill: none; stroke: var(--ssm-b); stroke-width: 1.5; stroke-linecap: round; opacity: .9; }
+  #ssm-{{ sid }} .ssm__trail--2 { transform: translate(5px, 4px); opacity: .55; }
+  #ssm-{{ sid }} .ssm__plane { filter: drop-shadow(0 8px 10px rgba(0,0,0,.35)); }
+
+  /* scene 2 */
+  #ssm-{{ sid }} .ssm__tube { position: relative; margin-top: -8vh; }
+  #ssm-{{ sid }} .ssm__tube-art { display: block; width: min(64vw, 1100px); height: auto; margin-left: -2vw; overflow: visible; }
+  #ssm-{{ sid }} .ssm__tube-shade { fill: none; stroke: rgba(10,20,60,.55); stroke-width: 104; stroke-linecap: round; transform: translate(0, 10px); }
+  #ssm-{{ sid }} .ssm__tube-body { fill: none; stroke-width: 96; stroke-linecap: round; }
+  #ssm-{{ sid }} .ssm__tube-gloss { fill: none; stroke: #fff; stroke-opacity: .35; stroke-width: 18; stroke-linecap: round; transform: translate(-10px, -18px); }
+  #ssm-{{ sid }} .ssm__ball { filter: drop-shadow(0 10px 14px rgba(10,20,60,.45)); }
+
+  /* scene 3 */
+  #ssm-{{ sid }} .ssm__butter {
+    display: grid; grid-template-columns: 1fr; gap: 3rem; align-items: center;
+    padding: 10vh 5vw 14vh;
+  }
+  #ssm-{{ sid }} .ssm__text { margin-top: 1.4rem; max-width: 34rem; font-size: 1rem; line-height: 1.5; opacity: .9; }
+  #ssm-{{ sid }} .ssm__text p { margin: 0; }
+  #ssm-{{ sid }} .ssm__buttons { display: flex; gap: .6rem; margin-top: 1.8rem; flex-wrap: wrap; }
+  #ssm-{{ sid }} .ssm__btn {
+    display: inline-flex; align-items: center; gap: .4em; padding: .55em 1.2em; border-radius: 999px;
+    border: 1px solid currentColor; color: inherit; text-decoration: none; font-size: .95rem; transition: background .2s, color .2s;
+  }
+  #ssm-{{ sid }} .ssm__btn:hover { background: var(--ssm-ink); color: var(--ssm-bg); }
+  #ssm-{{ sid }} .ssm__btn--fill { background: var(--ssm-accent); border-color: var(--ssm-accent); color: var(--ssm-bg); }
+  #ssm-{{ sid }} .ssm__btn--fill:hover { background: var(--ssm-ink); border-color: var(--ssm-ink); }
+  #ssm-{{ sid }} .ssm__rings { display: block; width: min(80vw, 30rem); height: auto; margin: 0 auto; overflow: visible; }
+  #ssm-{{ sid }} .ssm__ring circle { fill: none; stroke-width: 24; stroke-linecap: round; }
+  #ssm-{{ sid }} .ssm__ring--2 circle, #ssm-{{ sid }} .ssm__ring--4 circle { stroke-width: 20; opacity: .9; }
+
+  @media (min-width: 750px) {
+    #ssm-{{ sid }} .ssm__butter { grid-template-columns: 1fr 1fr; }
+    #ssm-{{ sid }} .ssm__rings { margin: 0 0 0 auto; }
+  }
+  @media (max-width: 749px) {
+    #ssm-{{ sid }}[data-ssm-live] .ssm__guide { left: 8%; width: 84%; top: 56%; }
+    #ssm-{{ sid }} .ssm__tube-art { width: 112vw; margin-left: -8vw; }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('ssm-{{ sid }}');
+    if (!host || host.dataset.ssmReady) return;
+    host.dataset.ssmReady = '1';
+
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var CDN = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/';
+
+    function load(src) {
+      return new Promise(function (ok, fail) {
+        var el = document.querySelector('script[data-nfn-src="' + src + '"]');
+        if (el) { if (el.dataset.done) ok(); else el.addEventListener('load', ok); return; }
+        el = document.createElement('script');
+        el.src = src; el.dataset.nfnSrc = src;
+        el.onload = function () { el.dataset.done = '1'; ok(); };
+        el.onerror = fail;
+        document.head.appendChild(el);
+      });
+    }
+
+    var made = [];
+
+    function build() {
+      var gsap = window.gsap, ScrollTrigger = window.ScrollTrigger, MotionPath = window.MotionPathPlugin;
+      if (!MotionPath) return;
+      gsap.registerPlugin(ScrollTrigger, MotionPath);
+
+      var fly = host.querySelector('[data-ssm-fly]');
+      var sky = host.querySelector('[data-ssm-sky]');
+      var route = host.querySelector('[data-ssm-route]');
+      var trails = host.querySelectorAll('[data-ssm-trail]');
+      var plane = host.querySelector('[data-ssm-plane]');
+      var intro = host.querySelector('[data-ssm-intro]');
+      var guide = host.querySelector('[data-ssm-guide]');
+
+      host.setAttribute('data-ssm-live', '');
+
+      /* ---- scene 1: the flight, drawn in stage pixels so the plane keeps its shape ---- */
+      var flyTl, routeLen = 1;
+
+      function drawRoute() {
+        var W = sky.clientWidth || window.innerWidth, V = sky.clientHeight || window.innerHeight;
+        var wide = W < 750 ? 1.35 : 1;   /* phones: spread the loop across the screen */
+        function P(x, y) { return ((0.5 + (x - 0.5) * wide) * W).toFixed(1) + ',' + (y * V).toFixed(1); }
+        var d = 'M' + P(.50, 1.08) +
+          ' C' + P(.49, .78) + ' ' + P(.50, .46) + ' ' + P(.56, .26) +
+          ' C' + P(.61, .10) + ' ' + P(.75, .12) + ' ' + P(.77, .30) +
+          ' C' + P(.79, .50) + ' ' + P(.66, .66) + ' ' + P(.56, .62) +
+          ' C' + P(.45, .58) + ' ' + P(.42, .40) + ' ' + P(.50, .32) +
+          ' C' + P(.57, .25) + ' ' + P(.62, .40) + ' ' + P(.66, .43) +
+          ' C' + P(.69, .45) + ' ' + P(.72, .41) + ' ' + P(.76, .40);
+        sky.setAttribute('viewBox', '0 0 ' + W + ' ' + V);
+        route.setAttribute('d', d);
+        trails.forEach(function (t) { t.setAttribute('d', d); });
+        routeLen = route.getTotalLength();
+        gsap.set(plane, { scale: W < 750 ? 1 : 1.3 });
+      }
+
+      /* the trail is a short stretch of the route just behind the plane */
+      function drawTrail(p) {
+        var seg = routeLen * 0.16;
+        var head = routeLen * p;
+        var vis = Math.min(seg, head);
+        trails.forEach(function (t) {
+          t.style.strokeDasharray = vis.toFixed(1) + ' ' + (routeLen * 2).toFixed(1);
+          t.style.strokeDashoffset = (-(head - vis)).toFixed(1);
+          t.style.opacity = p > 0.97 ? Math.max(0, (1 - p) / 0.03) : '';
+        });
+      }
+
+      function buildFly() {
+        if (flyTl) { flyTl.scrollTrigger && flyTl.scrollTrigger.kill(); flyTl.kill(); }
+        drawRoute();
+
+        flyTl = gsap.timeline({
+          defaults: { ease: 'none' },
+          scrollTrigger: { trigger: fly, start: 'top top', end: 'bottom bottom', scrub: 0.8 }
+        });
+
+        flyTl.to(plane, {
+          duration: 1,
+          ease: 'power1.inOut',
+          motionPath: { path: route, align: route, alignOrigin: [1, 0.5], autoRotate: true },
+          onUpdate: function () { drawTrail(this.progress()); }
+        }, 0);
+
+        flyTl.fromTo(intro, { y: 0 }, { y: function () { return -window.innerHeight * 0.75; }, duration: 0.4 }, 0.22);
+        flyTl.fromTo(guide, { y: function () { return window.innerHeight * 0.55; }, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' }, 0.5);
+
+        drawTrail(0);
+        made.push(flyTl);
+      }
+      buildFly();
+
+      var resizeTimer;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () { buildFly(); ScrollTrigger.refresh(); }, 200);
+      });
+
+      /* ---- scene 2: the ball rides the tube ---- */
+      var tube = host.querySelector('[data-ssm-tube]');
+      var tubePath = host.querySelector('[data-ssm-tube-path]');
+      var ball = host.querySelector('[data-ssm-ball]');
+      made.push(gsap.to(ball, {
+        ease: 'none',
+        motionPath: { path: tubePath, align: tubePath, alignOrigin: [0.5, 0.5], start: 0.06, end: 0.97 },
+        scrollTrigger: { trigger: tube, start: 'top 75%', end: 'bottom 45%', scrub: 0.8 }
+      }));
+
+      /* ---- scene 3: rings turn with the scroll, alternate ways ---- */
+      var butter = host.querySelector('[data-ssm-butter]');
+      host.querySelectorAll('[data-ssm-ring]').forEach(function (ring, i) {
+        var dir = i % 2 ? -1 : 1;
+        made.push(gsap.fromTo(ring, { rotation: -dir * (60 + i * 30), svgOrigin: '200 200' }, {
+          rotation: dir * (120 + i * 50), svgOrigin: '200 200', ease: 'none',
+          scrollTrigger: { trigger: butter, start: 'top bottom', end: 'bottom top', scrub: 1 }
+        }));
+        /* and drift slowly on their own, like the reference */
+        made.push(gsap.to(ring.querySelector('circle'), {
+          rotation: dir * 360, svgOrigin: '200 200', duration: 40 + i * 12, ease: 'none', repeat: -1
+        }));
+      });
+
+      ScrollTrigger.refresh();
+    }
+
+    load(CDN + 'gsap.min.js')
+      .then(function () { return Promise.all([load(CDN + 'ScrollTrigger.min.js'), load(CDN + 'MotionPathPlugin.min.js')]); })
+      .then(function () { return document.fonts && document.fonts.ready; })
+      .then(build)
+      .catch(function () { /* the still scenes stay on show */ });
+
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && '{{ section.id }}'.indexOf(e.detail.sectionId) !== -1) {
+        made.forEach(function (a) { if (a.scrollTrigger) a.scrollTrigger.kill(); a.kill(); });
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Scroll story",
+  "tag": "section",
+  "class": "section-scroll-story",
+  "settings": [
+    { "type": "paragraph", "content": "The opening scenes of gsap.com/scroll: a paper plane loops through the first scene, a ball rides a glossy tube, then a heading and buttons beside turning rings. Runs on the normal page scroll, so it works under Smooth scroll." },
+    { "type": "header", "content": "Scene 1 - the flight" },
+    { "type": "text", "id": "kicker", "label": "Small label", "default": "ScrollSmoother" },
+    { "type": "text", "id": "intro_heading", "label": "Heading", "default": "It's like a gentle breeze" },
+    { "type": "text", "id": "guide_text", "label": "Line the plane lands on", "default": "Effortlessly guiding your users from one section to another." },
+    { "type": "range", "id": "fly_length", "label": "Scroll for the flight", "min": 80, "max": 300, "step": 10, "unit": "vh", "default": 160 },
+    { "type": "header", "content": "Scene 3 - smooth like butter" },
+    { "type": "text", "id": "butter_heading", "label": "Heading", "default": "It's smooth like butter" },
+    { "type": "richtext", "id": "butter_text", "label": "Text", "default": "<p>ScrollSmoother leverages the native scroll mechanics meaning you can deliver a fluid and immersive experience for everyone, no matter the device or user input.</p>" },
+    { "type": "text", "id": "button1_label", "label": "First button", "default": "Demos" },
+    { "type": "url", "id": "button1_link", "label": "First button link" },
+    { "type": "text", "id": "button2_label", "label": "Second button", "default": "Docs" },
+    { "type": "url", "id": "button2_link", "label": "Second button link" },
+    { "type": "header", "content": "Colours" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#0e100f" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#fffce1" },
+    { "type": "color", "id": "accent_color", "label": "Label and button", "default": "#f5a3f5" },
+    { "type": "color", "id": "color_a", "label": "Tube, plane and rings - blue", "default": "#5fa8f5" },
+    { "type": "color", "id": "color_b", "label": "Tube, plane and rings - pink", "default": "#f2a0ee" }
+  ],
+  "presets": [
+    { "name": "Scroll story" }
+  ]
+}
+{% endschema %}
