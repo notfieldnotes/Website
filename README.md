@@ -15,6 +15,7 @@ vendor code, and the per-page settings live in Shopify's own template JSON.
 
 | File | What it does |
 | --- | --- |
+| `product-view.liquid` | Pinned GSAP reel, after henrietta.wearetattoodigital.com: each product wipes its colour up, slides its name across as a huge wordmark, and swings the pack in and out |
 | `product-scroller.liquid` | Row of product cards from a collection; pins and slides sideways with the page scroll on desktop, swipeable row on phones |
 | `product-showcase.liquid` | Product hero card: big photo in front with 3D drift, product name as a backdrop wordmark, price, swatches, quantity stepper and buy buttons |
 | `scrolling-logos.liquid` | Theme section, extended with a background image (opacity / size / position) and a square-corners option |
