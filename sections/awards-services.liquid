@@ -27,7 +27,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter+Tight:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
 <section class="aws" id="aws-{{ sid }}" data-aws
-  style="--aws-dark:{{ s.dark_color }};--aws-light:{{ s.light_color }};--aws-cream:{{ s.cream_color }};--aws-ink:{{ s.ink_color }};--aws-gold:{{ s.gold_color }};--aws-pin:{{ s.zoom_length }}vh;--aws-sticker:{{ s.sticker_color }};">
+  style="--aws-dark:{{ s.dark_color }};--aws-light:{{ s.light_color }};--aws-cream:{{ s.cream_color }};--aws-ink:{{ s.ink_color }};--aws-gold:{{ s.gold_color }};--aws-pin:{{ s.zoom_length }}vh;--aws-sticker:{{ s.sticker_color }};--aws-line:{{ s.line_color }};--aws-line-o:{{ s.line_strength | divided_by: 100.0 }};">
 
   {%- comment -%} 1. the globe {%- endcomment -%}
   <div class="aws__zoom" data-aws-zoom>
@@ -189,7 +189,7 @@
     perspective: 1400px; will-change: transform, opacity;
   }
   #aws-{{ sid }} .aws__globe { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  #aws-{{ sid }} .aws__globe circle, #aws-{{ sid }} .aws__globe ellipse { fill: none; stroke: var(--aws-light); stroke-opacity: .13; stroke-width: .5; vector-effect: non-scaling-stroke; }
+  #aws-{{ sid }} .aws__globe circle, #aws-{{ sid }} .aws__globe ellipse { fill: none; stroke: var(--aws-line); stroke-opacity: var(--aws-line-o); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
 
   #aws-{{ sid }} .aws__ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
   #aws-{{ sid }} .aws__item { display: none; }
@@ -556,6 +556,8 @@
     { "type": "color", "id": "dark_color", "label": "Globe background", "default": "#0d2620" },
     { "type": "color", "id": "light_color", "label": "Globe text and lines", "default": "#f3ece2" },
     { "type": "color", "id": "gold_color", "label": "Small words", "default": "#c9b26b" },
+    { "type": "color", "id": "line_color", "label": "Globe lines", "default": "#000000" },
+    { "type": "range", "id": "line_strength", "label": "Globe line strength", "min": 5, "max": 100, "step": 5, "unit": "%", "default": 60 },
     { "type": "color", "id": "cream_color", "label": "Cream background", "default": "#f3ece2" },
     { "type": "color", "id": "ink_color", "label": "Text", "default": "#141414" },
     { "type": "color", "id": "sticker_color", "label": "Sticker", "default": "#f7b84b" }
