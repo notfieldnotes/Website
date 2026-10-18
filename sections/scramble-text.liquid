@@ -1,0 +1,252 @@
+{% comment %}
+  Scramble text - the GSAP ScrambleText demo as a section.
+
+  A line of text is built from parts (blocks). When the section scrolls into
+  view each part scrambles into place in turn, using its own set of
+  characters - UPPERCASE, lowercase, numbers, symbols or your own - while a
+  cursor trails the end of the text.
+
+  The full sentence is kept in the page as real text for search engines and
+  screen readers; the scrambling copy sits on top of it and is hidden from
+  assistive tech. Without JavaScript, or with reduced motion, the plain text
+  just shows.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id | replace: '_', '-'
+-%}
+
+<section class="scr" id="scr-{{ sid }}"
+  data-scr
+  data-start="{{ s.trigger_start }}"
+  data-replay="{{ s.replay }}"
+  style="--scr-bg:{{ s.background_color }};--scr-ink:{{ s.text_color }};--scr-size:{{ s.text_size }}rem;--scr-size-m:{{ s.mobile_text_size }}rem;--scr-width:{{ s.max_width }}ch;--scr-pt:{{ s.padding_top }}px;--scr-pb:{{ s.padding_bottom }}px;--scr-align:{{ s.align }};--scr-cursor:{{ s.cursor_size }}em;">
+
+  <div class="scr__content">
+    <p class="scr__original" data-scr-original>
+      {%- for b in section.blocks -%}
+        {%- assign lead = b.settings.text | slice: 0 -%}
+        {%- unless forloop.first or ',.;:!?)' contains lead %} {% endunless -%}
+        {{- b.settings.text | strip | escape -}}
+      {%- endfor -%}
+    </p>
+
+    <p class="scr__text" aria-hidden="true" data-scr-text>
+      {%- for b in section.blocks -%}
+        {%- assign i = b.settings -%}
+        {%- assign lead = i.text | slice: 0 -%}
+        {%- unless forloop.first or ',.;:!?)' contains lead %} {% endunless -%}
+        {%- liquid
+          case i.chars
+            when 'upper'
+              assign charset = 'upperCase'
+            when 'lower'
+              assign charset = 'lowerCase'
+            when 'upper_lower'
+              assign charset = 'upperAndLowerCase'
+            when 'numbers'
+              assign charset = '0123456789'
+            when 'symbols'
+              assign charset = '!<>-_\/[]{}=+*^?#'
+            when 'custom'
+              assign charset = i.custom_chars | default: 'upperCase'
+            else
+              assign charset = 'upperCase'
+          endcase
+        -%}
+        <span class="scr__part" data-scr-part data-chars="{{ charset | escape }}" data-text="{{ i.text | strip | escape }}" data-duration="{{ i.duration }}" data-speed="{{ i.speed }}"{% if i.color != blank and i.color.alpha != 0.0 %} style="color:{{ i.color }};"{% endif %} {{ b.shopify_attributes }}></span>
+      {%- endfor -%}
+      {%- if s.cursor_image != blank -%}
+        <img class="scr__cursor scr__cursor--img" data-scr-cursor src="{{ s.cursor_image | image_url: width: 160 }}" alt="" width="{{ s.cursor_image.width }}" height="{{ s.cursor_image.height }}">
+      {%- else -%}
+        <span class="scr__cursor scr__cursor--bar" data-scr-cursor></span>
+      {%- endif -%}
+    </p>
+  </div>
+</section>
+
+<style>
+  #scr-{{ sid }} { background: var(--scr-bg); color: var(--scr-ink); padding: var(--scr-pt) 5vw var(--scr-pb); }
+  #scr-{{ sid }} * { box-sizing: border-box; }
+  #scr-{{ sid }} .scr__content { position: relative; max-width: var(--scr-width); margin: 0 auto; padding-bottom: 1.1em; text-align: var(--scr-align); }
+  #scr-{{ sid }} .scr__original,
+  #scr-{{ sid }} .scr__text {
+    margin: 0; font-size: var(--scr-size-m); line-height: 1.1; font-weight: 600;
+    font-family: var(--font-heading-family, inherit); letter-spacing: -.01em;
+  }
+  /* the real text holds the space, so nothing jumps when the scramble starts */
+  #scr-{{ sid }} .scr__text { position: absolute; inset: 0; pointer-events: none; display: none; }
+  #scr-{{ sid }} .scr__part { word-break: break-word; }
+  #scr-{{ sid }}[data-scr-live] .scr__text { display: block; }
+  #scr-{{ sid }}[data-scr-live] .scr__original { visibility: hidden; }
+  #scr-{{ sid }} .scr__part { white-space: pre-wrap; }
+  #scr-{{ sid }} .scr__cursor { display: inline-block; vertical-align: -.1em; margin-left: .15em; }
+  #scr-{{ sid }} .scr__cursor--img { height: var(--scr-cursor); width: auto; }
+  #scr-{{ sid }} .scr__cursor--bar { width: .08em; height: var(--scr-cursor); background: currentColor; }
+
+  @media (min-width: 750px) {
+    #scr-{{ sid }} .scr__original,
+    #scr-{{ sid }} .scr__text { font-size: var(--scr-size); }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('scr-{{ sid }}');
+    if (!host || host.dataset.scrReady) return;
+    host.dataset.scrReady = '1';
+
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var CDN = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/';
+
+    function load(src) {
+      return new Promise(function (ok, fail) {
+        var el = document.querySelector('script[data-nfn-src="' + src + '"]');
+        if (el) { if (el.dataset.done) ok(); else el.addEventListener('load', ok); return; }
+        el = document.createElement('script');
+        el.src = src; el.dataset.nfnSrc = src;
+        el.onload = function () { el.dataset.done = '1'; ok(); };
+        el.onerror = fail;
+        document.head.appendChild(el);
+      });
+    }
+
+    var tl, st;
+
+    function build() {
+      var gsap = window.gsap, ScrollTrigger = window.ScrollTrigger, Scramble = window.ScrambleTextPlugin;
+      if (!Scramble) return;
+      gsap.registerPlugin(ScrollTrigger, Scramble);
+
+      var parts = host.querySelectorAll('[data-scr-part]');
+      var cursor = host.querySelector('[data-scr-cursor]');
+      if (!parts.length) return;
+
+      host.setAttribute('data-scr-live', '');
+
+      var cursorTl;
+
+      function play() {
+        if (tl) tl.kill();
+        if (cursorTl) cursorTl.kill();
+        parts.forEach(function (p) { p.textContent = ''; });
+        if (cursor) gsap.set(cursor, { opacity: 1 });
+
+        /* parts scramble in one after another, as in the GSAP demo */
+        tl = gsap.timeline({ defaults: { ease: 'none' } });
+
+        parts.forEach(function (part) {
+          var text = part.getAttribute('data-text') || '';
+          if (!text) return;
+          tl.to(part, {
+            duration: parseFloat(part.getAttribute('data-duration')) || 2,
+            scrambleText: {
+              text: text,
+              chars: part.getAttribute('data-chars') || 'upperCase',
+              speed: parseFloat(part.getAttribute('data-speed')) || 1
+            }
+          });
+        });
+
+        /* once the text has landed the cursor blinks */
+        if (cursor) {
+          cursorTl = gsap.timeline({ repeat: -1 });
+          cursorTl
+            .to(cursor, { opacity: 0, duration: 0.5, ease: 'none', delay: 0.2 })
+            .to(cursor, { opacity: 1, duration: 0.5, ease: 'none', delay: 0.2 });
+          tl.add(cursorTl);
+        }
+      }
+
+      st = ScrollTrigger.create({
+        trigger: host,
+        start: host.dataset.start || 'top 75%',
+        once: host.dataset.replay !== 'true',
+        onEnter: play,
+        onEnterBack: function () { if (host.dataset.replay === 'true') play(); }
+      });
+    }
+
+    load(CDN + 'gsap.min.js')
+      .then(function () { return Promise.all([load(CDN + 'ScrollTrigger.min.js'), load(CDN + 'ScrambleTextPlugin.min.js')]); })
+      .then(build)
+      .catch(function () { /* the plain text stays on show */ });
+
+    document.addEventListener('shopify:section:unload', function (e) {
+      if (e.detail && e.detail.sectionId && '{{ section.id }}'.indexOf(e.detail.sectionId) !== -1) {
+        if (st) st.kill();
+        if (tl) tl.kill();
+        if (window.gsap) window.gsap.killTweensOf(host.querySelector('[data-scr-cursor]'));
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Scramble text",
+  "tag": "section",
+  "class": "section-scramble-text",
+  "settings": [
+    { "type": "paragraph", "content": "A sentence that scrambles into place, part by part, each part with its own set of characters (the GSAP ScrambleText demo). Add a block for every part of the sentence, in order." },
+    { "type": "select", "id": "trigger_start", "label": "Starts when", "default": "top 75%", "options": [
+      { "value": "top 90%", "label": "Section just appears" },
+      { "value": "top 75%", "label": "Section is a quarter in" },
+      { "value": "top 50%", "label": "Section reaches the middle" }
+    ] },
+    { "type": "checkbox", "id": "replay", "label": "Replay every time it scrolls into view", "default": false },
+    { "type": "header", "content": "Look" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#0e100f" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#dfdcff" },
+    { "type": "range", "id": "text_size", "label": "Text size", "min": 1.5, "max": 8, "step": 0.25, "unit": "rem", "default": 3 },
+    { "type": "range", "id": "mobile_text_size", "label": "Text size on phones", "min": 1.25, "max": 5, "step": 0.25, "unit": "rem", "default": 2 },
+    { "type": "range", "id": "max_width", "label": "Text width", "min": 20, "max": 90, "step": 2, "unit": "ch", "default": 40 },
+    { "type": "select", "id": "align", "label": "Alignment", "default": "center", "options": [
+      { "value": "left", "label": "Left" },
+      { "value": "center", "label": "Centre" }
+    ] },
+    { "type": "header", "content": "Cursor" },
+    { "type": "image_picker", "id": "cursor_image", "label": "Cursor image", "info": "Optional. Without one, a blinking bar is used." },
+    { "type": "range", "id": "cursor_size", "label": "Cursor height", "min": 0.6, "max": 2, "step": 0.1, "unit": "em", "default": 0.9 },
+    { "type": "header", "content": "Spacing" },
+    { "type": "range", "id": "padding_top", "label": "Top", "min": 0, "max": 240, "step": 4, "unit": "px", "default": 100 },
+    { "type": "range", "id": "padding_bottom", "label": "Bottom", "min": 0, "max": 240, "step": 4, "unit": "px", "default": 100 }
+  ],
+  "blocks": [
+    {
+      "type": "part",
+      "name": "Text part",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "info": "Parts are joined with a space automatically, except before punctuation such as a comma or full stop." },
+        { "type": "select", "id": "chars", "label": "Scrambles with", "default": "upper", "options": [
+          { "value": "upper", "label": "UPPERCASE letters" },
+          { "value": "lower", "label": "lowercase letters" },
+          { "value": "upper_lower", "label": "Upper and lowercase" },
+          { "value": "numbers", "label": "Numbers" },
+          { "value": "symbols", "label": "Symbols" },
+          { "value": "custom", "label": "My own characters" }
+        ] },
+        { "type": "text", "id": "custom_chars", "label": "My own characters", "default": "XO" },
+        { "type": "range", "id": "duration", "label": "Takes", "min": 0.5, "max": 6, "step": 0.5, "unit": "s", "default": 2 },
+        { "type": "range", "id": "speed", "label": "Flicker speed", "min": 0.1, "max": 1.5, "step": 0.1, "default": 1, "info": "Lower flickers through the characters more slowly." },
+        { "type": "color", "id": "color", "label": "Colour", "info": "Leave clear to use the text colour." }
+      ]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [
+    {
+      "name": "Scramble text",
+      "blocks": [
+        { "type": "part", "settings": { "text": "Mix it up with ScrambleText.", "chars": "lower", "duration": 2, "speed": 1 } },
+        { "type": "part", "settings": { "text": "Animate using characters,", "chars": "custom", "custom_chars": "XO", "duration": 2, "speed": 0.4 } },
+        { "type": "part", "settings": { "text": "numbers,", "chars": "numbers", "duration": 2, "speed": 1 } },
+        { "type": "part", "settings": { "text": "UPPERCASE", "chars": "upper", "duration": 1, "speed": 0.3 } },
+        { "type": "part", "settings": { "text": "or lowercase.", "chars": "lower", "duration": 1.5, "speed": 0.3 } }
+      ]
+    }
+  ]
+}
+{% endschema %}
