@@ -1,0 +1,209 @@
+{% comment %}
+  Feature block - the Apple "take a closer look" block (Skiper UI skiper76).
+
+  A large rounded stage with a column of round "+" buttons beside a big image.
+  Clicking a button opens it into a pill with the feature's description and
+  crossfades the image to that feature; the open pill closes the others.
+
+  Each feature is a block. On a product page a feature with no image of its own
+  uses the product's photo at the same position (feature 1 = first photo,
+  feature 2 = second photo, and so on), so one template suits every product.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id | replace: '_', '-'
+  assign media = product.media | where: 'media_type', 'image'
+-%}
+
+<section class="afb" id="afb-{{ sid }}" data-afb
+  style="--afb-bg:{{ s.background_color }};--afb-stage:{{ s.stage_color }};--afb-ink:{{ s.text_color }};--afb-pill:{{ s.pill_color }};--afb-pill-ink:{{ s.pill_text_color }};--afb-h:{{ s.stage_height }}vh;--afb-r:{{ s.radius }}px;">
+
+  {%- if s.heading != blank -%}
+    <h2 class="afb__heading">{{ s.heading | escape }}</h2>
+  {%- endif -%}
+
+  <div class="afb__stage">
+    <div class="afb__media">
+      {%- for b in section.blocks -%}
+        {%- liquid
+          assign img = b.settings.image
+          if img == blank and media.size > 0
+            assign n = forloop.index0 | modulo: media.size
+            assign img = media[n].preview_image
+          endif
+        -%}
+        <div class="afb__pic{% if forloop.first %} is-on{% endif %}" data-afb-pic>
+          {%- if img != blank -%}
+            {{ img | image_url: width: 1600 | image_tag: loading: 'lazy', widths: '600, 1000, 1600', sizes: '(min-width: 990px) 60vw, 100vw', alt: b.settings.title }}
+          {%- else -%}
+            {{ 'product-1' | placeholder_svg_tag: 'afb__ph' }}
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+
+    <ul class="afb__list" role="list">
+      {%- for b in section.blocks -%}
+        {%- assign i = b.settings -%}
+        <li class="afb__item{% if forloop.first and s.first_open %} is-open{% endif %}" data-afb-item {{ b.shopify_attributes }}>
+          <button type="button" class="afb__btn" data-afb-btn aria-expanded="{% if forloop.first and s.first_open %}true{% else %}false{% endif %}" aria-controls="afb-{{ sid }}-{{ forloop.index }}">
+            <span class="afb__icon" aria-hidden="true"></span>
+            <span class="afb__name">{{ i.title | escape }}</span>
+          </button>
+          <div class="afb__desc" id="afb-{{ sid }}-{{ forloop.index }}">
+            <div class="afb__desc-in">
+              <p><strong>{{ i.title | escape }}.</strong> {{ i.text | escape }}</p>
+            </div>
+          </div>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+
+<style>
+  #afb-{{ sid }} { background: var(--afb-bg); color: var(--afb-ink); padding: {{ s.padding_top }}px 4vw {{ s.padding_bottom }}px; }
+  #afb-{{ sid }} * { box-sizing: border-box; }
+  #afb-{{ sid }} .afb__heading {
+    margin: 0 0 1.8rem; color: inherit; font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400);
+    font-size: clamp(1.8rem, 4.2vw, 4rem); line-height: 1; text-transform: uppercase; letter-spacing: var(--heading-letterspacing, 0);
+  }
+  #afb-{{ sid }} .afb__stage {
+    position: relative; overflow: hidden; border-radius: var(--afb-r); background: var(--afb-stage);
+    display: flex; flex-direction: column;
+  }
+  #afb-{{ sid }} .afb__media { position: relative; aspect-ratio: 4 / 3; }
+  #afb-{{ sid }} .afb__pic { position: absolute; inset: 0; opacity: 0; transform: scale(1.03); transition: opacity .6s ease, transform .9s cubic-bezier(.2,.7,.2,1); }
+  #afb-{{ sid }} .afb__pic.is-on { opacity: 1; transform: none; }
+  #afb-{{ sid }} .afb__pic img, #afb-{{ sid }} .afb__ph { width: 100%; height: 100%; object-fit: {{ s.image_fit }}; display: block; }
+
+  #afb-{{ sid }} .afb__list { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: .6rem; margin: 0; padding: 1.2rem; list-style: none; }
+  #afb-{{ sid }} .afb__item {
+    width: max-content; max-width: 100%; border-radius: 1.6rem; background: var(--afb-pill); color: var(--afb-pill-ink);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    transition: border-radius .4s ease;
+  }
+  #afb-{{ sid }} .afb__btn {
+    display: flex; align-items: center; gap: .75rem; width: 100%; padding: .55rem 1.2rem .55rem .55rem;
+    border: 0; background: none; color: inherit; cursor: pointer; text-align: left; font: inherit;
+  }
+  #afb-{{ sid }} .afb__icon {
+    position: relative; flex: none; width: 2.1rem; height: 2.1rem; border-radius: 50%;
+    border: 1.5px solid currentColor; transition: transform .45s cubic-bezier(.65,.05,.25,1);
+  }
+  #afb-{{ sid }} .afb__icon::before, #afb-{{ sid }} .afb__icon::after {
+    content: ''; position: absolute; left: 50%; top: 50%; width: .8rem; height: 1.5px; background: currentColor; transform: translate(-50%, -50%);
+  }
+  #afb-{{ sid }} .afb__icon::after { transform: translate(-50%, -50%) rotate(90deg); }
+  #afb-{{ sid }} .is-open .afb__icon { transform: rotate(45deg); }
+  #afb-{{ sid }} .afb__name { font-family: var(--main-font-stack, sans-serif); font-weight: 600; font-size: 1rem; line-height: 1.2; }
+  #afb-{{ sid }} .is-open .afb__btn .afb__name { display: none; }
+
+  /* the description folds open under the button */
+  #afb-{{ sid }} .afb__desc { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .5s cubic-bezier(.65,.05,.25,1); }
+  #afb-{{ sid }} .afb__desc-in { overflow: hidden; }
+  #afb-{{ sid }} .afb__desc p { margin: 0; padding: 0 1.4rem 1.2rem; max-width: 26rem; font-family: var(--main-font-stack, sans-serif); font-size: 1rem; line-height: 1.45; opacity: 0; transition: opacity .3s ease; }
+  #afb-{{ sid }} .afb__desc strong { font-weight: 700; }
+  #afb-{{ sid }} .is-open .afb__desc { grid-template-rows: 1fr; }
+  #afb-{{ sid }} .afb__item.is-open { width: 26rem; }
+  #afb-{{ sid }} .is-open .afb__desc p { opacity: 1; transition-delay: .2s; }
+  #afb-{{ sid }} .is-open .afb__btn { padding-bottom: .35rem; }
+
+  @media (min-width: 990px) {
+    #afb-{{ sid }} .afb__stage { display: block; height: var(--afb-h); min-height: 34rem; }
+    #afb-{{ sid }} .afb__media { position: absolute; inset: 0; aspect-ratio: auto; }
+    #afb-{{ sid }} .afb__media { left: {{ s.image_offset }}%; }
+    #afb-{{ sid }} .afb__list { position: absolute; left: 3rem; top: 50%; transform: translateY(-50%); max-height: calc(100% - 4rem); overflow: auto; padding: 0; scrollbar-width: none; }
+    #afb-{{ sid }} .afb__item { max-width: 26rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #afb-{{ sid }} .afb__pic, #afb-{{ sid }} .afb__desc, #afb-{{ sid }} .afb__icon, #afb-{{ sid }} .afb__desc p { transition: none; }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('afb-{{ sid }}');
+    if (!host || host.dataset.afbReady) return;
+    host.dataset.afbReady = '1';
+
+    var items = host.querySelectorAll('[data-afb-item]');
+    var pics = host.querySelectorAll('[data-afb-pic]');
+
+    function show(index) {
+      items.forEach(function (it, i) {
+        var on = i === index;
+        it.classList.toggle('is-open', on);
+        it.querySelector('[data-afb-btn]').setAttribute('aria-expanded', on ? 'true' : 'false');
+      });
+      pics.forEach(function (p, i) { p.classList.toggle('is-on', i === (index < 0 ? 0 : index)); });
+    }
+
+    items.forEach(function (it, i) {
+      it.querySelector('[data-afb-btn]').addEventListener('click', function () {
+        show(it.classList.contains('is-open') ? -1 : i);
+      });
+    });
+
+    /* in the theme editor, selecting a feature block opens it */
+    document.addEventListener('shopify:block:select', function (e) {
+      if (!host.contains(e.target)) return;
+      var i = [].indexOf.call(items, e.target);
+      if (i > -1) show(i);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Feature block",
+  "tag": "section",
+  "class": "section-feature-block",
+  "settings": [
+    { "type": "paragraph", "content": "Apple-style 'take a closer look': round + buttons beside a big image; each opens into a pill with the feature's text and switches the image. A feature without its own image uses the product's photo at the same position." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Take a closer look." },
+    { "type": "checkbox", "id": "first_open", "label": "Open the first feature to start", "default": false },
+    { "type": "header", "content": "Image" },
+    { "type": "select", "id": "image_fit", "label": "Image fit", "default": "contain", "options": [
+      { "value": "contain", "label": "Show the whole image" },
+      { "value": "cover", "label": "Fill the stage" }
+    ] },
+    { "type": "range", "id": "image_offset", "label": "Image starts from the left", "min": 0, "max": 45, "step": 5, "unit": "%", "default": 30, "info": "Desktop. Leaves room for the buttons." },
+    { "type": "range", "id": "stage_height", "label": "Height (desktop)", "min": 50, "max": 95, "step": 5, "unit": "vh", "default": 80 },
+    { "type": "range", "id": "radius", "label": "Corner radius", "min": 0, "max": 48, "step": 4, "unit": "px", "default": 28 },
+    { "type": "header", "content": "Colours" },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#ffffff" },
+    { "type": "color", "id": "stage_color", "label": "Stage", "default": "#f5f5f7" },
+    { "type": "color", "id": "text_color", "label": "Heading", "default": "#1d1d1f" },
+    { "type": "color", "id": "pill_color", "label": "Buttons", "default": "#e8e8ed" },
+    { "type": "color", "id": "pill_text_color", "label": "Button text", "default": "#1d1d1f" },
+    { "type": "header", "content": "Spacing" },
+    { "type": "range", "id": "padding_top", "label": "Top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 64 },
+    { "type": "range", "id": "padding_bottom", "label": "Bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 64 }
+  ],
+  "blocks": [
+    {
+      "type": "feature",
+      "name": "Feature",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Feature" },
+        { "type": "textarea", "id": "text", "label": "Text", "default": "Describe this feature in a sentence or two." },
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Optional. On a product page, empty uses the product photo at the same position." }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "Feature block",
+      "blocks": [
+        { "type": "feature", "settings": { "title": "Bleed-free paper", "text": "Thick, smooth pages that take fountain pens, gel pens and markers without bleeding through to the next page." } },
+        { "type": "feature", "settings": { "title": "Pocket sized", "text": "3.5\" x 5.5\" - small enough for a jeans pocket, big enough for match notes, lists and doodles." } },
+        { "type": "feature", "settings": { "title": "60 pages", "text": "Sixty pages in every notebook - room for a whole tournament of notes." } },
+        { "type": "feature", "settings": { "title": "Collector covers", "text": "Limited edition FIFA World Cup 2026 artwork, printed on a durable cover made to be used." } }
+      ]
+    }
+  ]
+}
+{% endschema %}
