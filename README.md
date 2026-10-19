@@ -15,6 +15,7 @@ vendor code, and the per-page settings live in Shopify's own template JSON.
 
 | File | What it does |
 | --- | --- |
+| `apple-navbar.liquid` | Skiper UI Apple navbar: slim frosted sticky bar; hovering a link grows one shared dropdown panel with staggered links while the page blurs; search opens in the same panel; phones get a two-line → X button and a full-screen menu with slide-in sub-pages |
 | `feature-block.liquid` | Apple "take a closer look" feature block: round + buttons beside a big image, each opening into a pill with the feature text and switching the image; on product pages uses each product's own photos |
 | `hover-expansion.liquid` | Skiper UI hover expansion: a row of image panels where the hovered one widens and shows its title and link; stacks with tap-to-open on phones; blocks or a collection's products |
 | `image-trail.liquid` | Skiper UI image cursor trail: images pop up along the pointer's path and fade away; uses image blocks or a collection's product photos |

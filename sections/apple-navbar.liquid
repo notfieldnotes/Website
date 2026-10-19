@@ -1,0 +1,738 @@
+{%- comment -%}
+  Apple navbar (Skiper UI "Apple navbar V001", skiper38).
+
+  A slim frosted bar with the menu spread across the middle. Hovering a link
+  that has a dropdown grows one shared panel down out of the bar, its links
+  dropping in one after another, while the page behind blurs. Moving to
+  another link resizes the same panel to fit. The search icon opens the panel
+  as a search box with quick links. On phones the two-line button turns into
+  an X and the menu unrolls full screen; links with a dropdown slide across to
+  their own page with a back arrow.
+
+  Dropdowns come from the menu's own child links. A "Dropdown" block can also
+  be added for any top-level link (matched by its title) to give it up to
+  three titled columns of links from other menus.
+{%- endcomment -%}
+
+{%- liquid
+  assign sid = section.id
+  assign menu = section.settings.menu
+  assign bar_h = section.settings.bar_height
+-%}
+
+{%- capture dd_desktop -%}{%- endcapture -%}
+{%- capture dd_mobile -%}{%- endcapture -%}
+
+{%- if menu != blank -%}
+  {%- for link in menu.links -%}
+    {%- liquid
+      assign key = 'm' | append: forloop.index
+      assign link_title = link.title | downcase | strip
+      assign dd_block = nil
+      for b in section.blocks
+        assign bt = b.settings.item | downcase | strip
+        if bt == link_title and bt != blank
+          assign dd_block = b
+          break
+        endif
+      endfor
+      assign has_dd = false
+      if dd_block or link.links.size > 0
+        assign has_dd = true
+      endif
+    -%}
+    {%- if has_dd -%}
+      {%- assign i = 0 -%}
+      {%- capture cols -%}
+        {%- if dd_block -%}
+          {%- for n in (1..3) -%}
+            {%- liquid
+              assign hk = 'heading_' | append: n
+              assign mk = 'menu_' | append: n
+              assign col_heading = dd_block.settings[hk]
+              assign col_menu = dd_block.settings[mk]
+            -%}
+            {%- if col_menu != blank and col_menu.links.size > 0 -%}
+              <div class="anv__col{% if forloop.first %} anv__col--big{% endif %}">
+                {%- if col_heading != blank -%}
+                  {%- assign i = i | plus: 1 -%}
+                  <p class="anv__colhead" style="--i: {{ i }}">{{ col_heading | escape }}</p>
+                {%- endif -%}
+                <ul>
+                  {%- for l in col_menu.links -%}
+                    {%- assign i = i | plus: 1 -%}
+                    <li style="--i: {{ i }}"><a href="{{ l.url }}">{{ l.title | escape }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- else -%}
+          {%- assign grand = false -%}
+          {%- for c in link.links -%}
+            {%- if c.links.size > 0 -%}{%- assign grand = true -%}{%- endif -%}
+          {%- endfor -%}
+          {%- if grand -%}
+            {%- for c in link.links -%}
+              <div class="anv__col{% if forloop.first %} anv__col--big{% endif %}">
+                {%- assign i = i | plus: 1 -%}
+                <p class="anv__colhead" style="--i: {{ i }}"><a href="{{ c.url }}">{{ c.title | escape }}</a></p>
+                <ul>
+                  {%- for g in c.links -%}
+                    {%- assign i = i | plus: 1 -%}
+                    <li style="--i: {{ i }}"><a href="{{ g.url }}">{{ g.title | escape }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              </div>
+            {%- endfor -%}
+          {%- else -%}
+            <div class="anv__col anv__col--big">
+              {%- assign i = i | plus: 1 -%}
+              <p class="anv__colhead" style="--i: {{ i }}">{{ link.title | escape }}</p>
+              <ul>
+                {%- for c in link.links -%}
+                  {%- assign i = i | plus: 1 -%}
+                  <li style="--i: {{ i }}"><a href="{{ c.url }}">{{ c.title | escape }}</a></li>
+                {%- endfor -%}
+                {%- assign i = i | plus: 1 -%}
+                <li style="--i: {{ i }}"><a href="{{ link.url }}">{{ section.settings.all_label | escape }} {{ link.title | escape }}</a></li>
+              </ul>
+            </div>
+          {%- endif -%}
+        {%- endif -%}
+      {%- endcapture -%}
+      {%- capture dd_desktop -%}{{ dd_desktop }}<div class="anv__dd" data-dd="{{ key }}"><div class="anv__ddin">{{ cols }}</div></div>{%- endcapture -%}
+      {%- capture dd_mobile -%}{{ dd_mobile }}<div class="anv__msub" data-sub="{{ key }}"><button type="button" class="anv__back" data-back aria-label="{{ section.settings.back_label | escape }}"><svg viewBox="0 0 9 16" aria-hidden="true"><path d="M8 1 1 8l7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="anv__mcols">{{ cols }}</div></div>{%- endcapture -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+
+<style>
+  #shopify-section-{{ sid }} {
+    {%- if section.settings.sticky %}
+    position: sticky;
+    top: 0;
+    {%- else %}
+    position: relative;
+    {%- endif %}
+    z-index: 60;
+  }
+  #anv-{{ sid }} {
+    --anv-h: {{ bar_h }}px;
+    --anv-bg: {{ section.settings.bar_color }};
+    --anv-alpha: {{ section.settings.bar_opacity | divided_by: 100.0 }};
+    --anv-panel: {{ section.settings.panel_color }};
+    --anv-fg: {{ section.settings.text_color }};
+    --anv-muted: {{ section.settings.muted_color }};
+    --anv-dim: {{ section.settings.backdrop_dim | divided_by: 100.0 }};
+    --anv-blur: {{ section.settings.backdrop_blur }}px;
+    --anv-size: {{ section.settings.link_size }}px;
+    --anv-big: {{ section.settings.big_link_size }}px;
+    --anv-w: {{ section.settings.content_width }}px;
+    --anv-ease: cubic-bezier(0.4, 0, 0.6, 1);
+    --anv-out: cubic-bezier(0.28, 0.11, 0.32, 1);
+    position: relative;
+    height: var(--anv-h);
+    color: var(--anv-fg);
+    font-family: var(--main-font-stack);
+  }
+  #anv-{{ sid }} *,
+  #anv-{{ sid }} *::before,
+  #anv-{{ sid }} *::after { box-sizing: border-box; }
+  #anv-{{ sid }} a { color: inherit; text-decoration: none; }
+  #anv-{{ sid }} ul { list-style: none; margin: 0; padding: 0; }
+  #anv-{{ sid }} p { margin: 0; }
+  #anv-{{ sid }} button {
+    font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+  }
+
+  /* bar + panel are one surface so the panel looks like the bar growing */
+  #anv-{{ sid }} .anv__wrap {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 2;
+  }
+  #anv-{{ sid }} .anv__surface {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: calc(var(--anv-h) + var(--anv-ph, 0px));
+    background: color-mix(in srgb, var(--anv-bg) calc(var(--anv-alpha) * 100%), transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    transition: height 0.32s var(--anv-ease), background-color 0.32s var(--anv-ease);
+    pointer-events: none;
+  }
+  #anv-{{ sid }}.is-open .anv__surface,
+  #anv-{{ sid }}.is-menu .anv__surface { background: var(--anv-panel); }
+  {%- if section.settings.show_border %}
+  #anv-{{ sid }} .anv__surface::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+    background: color-mix(in srgb, var(--anv-fg) 12%, transparent);
+    transition: opacity 0.2s;
+  }
+  #anv-{{ sid }}.is-open .anv__surface::after { opacity: 0; }
+  {%- endif %}
+
+  #anv-{{ sid }} .anv__bar {
+    position: relative;
+    height: var(--anv-h);
+    max-width: var(--anv-w);
+    margin: 0 auto;
+    padding: 0 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  #anv-{{ sid }} .anv__logo {
+    display: flex; align-items: center; flex: none; height: 100%; padding: 0 8px;
+    font-family: var(--heading-font-stack);
+    font-weight: var(--heading-font-weight);
+    letter-spacing: var(--heading-letterspacing);
+    font-size: calc(var(--anv-size) + 3px);
+    opacity: 0.88; transition: opacity 0.2s;
+  }
+  #anv-{{ sid }} .anv__logo:hover { opacity: 1; }
+  #anv-{{ sid }} .anv__logo img { display: block; width: {{ section.settings.logo_width }}px; height: auto; max-height: calc(var(--anv-h) - 12px); object-fit: contain; }
+  #anv-{{ sid }} .anv__links {
+    flex: 1; display: flex; justify-content: space-between; align-items: center; height: 100%;
+    max-width: {{ section.settings.links_spread }}px; margin: 0 auto;
+  }
+  #anv-{{ sid }} .anv__link {
+    display: flex; align-items: center; height: 100%; padding: 0 8px;
+    font-size: var(--anv-size); letter-spacing: -0.01em; white-space: nowrap;
+    opacity: 0.8; transition: opacity 0.2s;
+  }
+  #anv-{{ sid }} .anv__link:hover,
+  #anv-{{ sid }} .anv__link:focus-visible,
+  #anv-{{ sid }} .anv__link.is-current { opacity: 1; }
+  #anv-{{ sid }} .anv__icons { display: flex; align-items: center; height: 100%; flex: none; }
+  #anv-{{ sid }} .anv__icon {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 100%; opacity: 0.8; transition: opacity 0.2s;
+  }
+  #anv-{{ sid }} .anv__icon:hover { opacity: 1; }
+  #anv-{{ sid }} .anv__icon svg { width: 16px; height: 16px; display: block; }
+  #anv-{{ sid }} .anv__count {
+    position: absolute; top: 50%; left: 50%; transform: translate(1px, 1px);
+    min-width: 13px; height: 13px; padding: 0 3px; border-radius: 7px;
+    background: var(--anv-fg); color: var(--anv-panel);
+    font-size: 8.5px; line-height: 13px; text-align: center; font-weight: 600;
+  }
+  #anv-{{ sid }} .anv__count[data-n="0"] { display: none; }
+
+  /* ---- desktop dropdown panel ---- */
+  #anv-{{ sid }} .anv__panel {
+    position: relative;
+    height: var(--anv-ph, 0px);
+    overflow: hidden;
+    transition: height 0.32s var(--anv-ease);
+  }
+  #anv-{{ sid }} .anv__dd {
+    position: absolute; inset: 0 0 auto 0;
+    visibility: hidden; pointer-events: none;
+  }
+  #anv-{{ sid }} .anv__dd.is-active { visibility: visible; pointer-events: auto; }
+  #anv-{{ sid }} .anv__ddin {
+    max-width: var(--anv-w); margin: 0 auto;
+    padding: 40px 22px 84px calc(22px + 8px);
+    display: flex; gap: 44px;
+  }
+  #anv-{{ sid }} .anv__col { min-width: 0; }
+  #anv-{{ sid }} .anv__col--big { padding-right: 44px; }
+  #anv-{{ sid }} .anv__colhead {
+    font-size: 12px; color: var(--anv-muted); margin-bottom: 14px;
+  }
+  #anv-{{ sid }} .anv__col li + li { margin-top: 8px; }
+  #anv-{{ sid }} .anv__col a {
+    display: inline-block; font-size: 12px; font-weight: 600; transition: color 0.2s;
+  }
+  #anv-{{ sid }} .anv__col--big li + li { margin-top: 10px; }
+  #anv-{{ sid }} .anv__col--big a {
+    font-family: var(--heading-font-stack);
+    font-weight: var(--heading-font-weight);
+    letter-spacing: var(--heading-letterspacing);
+    font-size: var(--anv-big); line-height: 1.15;
+  }
+  #anv-{{ sid }} .anv__col a:hover { color: var(--anv-muted); }
+  #anv-{{ sid }} .anv__colhead a { font-size: inherit; font-weight: inherit; font-family: inherit; color: inherit; }
+
+  /* the stagger: every heading and link drops in one after another */
+  #anv-{{ sid }} [style*="--i"] {
+    opacity: 0; transform: translateY(-8px);
+    transition: opacity 0.16s var(--anv-ease), transform 0.16s var(--anv-ease);
+  }
+  #anv-{{ sid }} .anv__dd.is-shown [style*="--i"],
+  #anv-{{ sid }} .anv__msub.is-shown [style*="--i"] {
+    opacity: 1; transform: none;
+    transition: opacity 0.32s var(--anv-out), transform 0.32s var(--anv-out);
+    transition-delay: calc(80ms + var(--i) * 20ms);
+  }
+
+  /* search panel */
+  #anv-{{ sid }} .anv__search form { display: flex; align-items: center; gap: 12px; }
+  #anv-{{ sid }} .anv__search svg { width: 24px; height: 24px; flex: none; color: var(--anv-muted); }
+  #anv-{{ sid }} .anv__search input {
+    flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--anv-fg);
+    font-family: var(--heading-font-stack); font-weight: var(--heading-font-weight);
+    font-size: var(--anv-big); padding: 4px 0;
+  }
+  #anv-{{ sid }} .anv__search input::placeholder { color: var(--anv-muted); opacity: 0.8; }
+  #anv-{{ sid }} .anv__search .anv__ddin { display: block; }
+  #anv-{{ sid }} .anv__quick { margin-top: 34px; }
+  #anv-{{ sid }} .anv__quick a { font-size: 13px; font-weight: 600; display: inline-flex; gap: 10px; align-items: center; }
+  #anv-{{ sid }} .anv__quick a::before { content: '→'; color: var(--anv-muted); }
+  #anv-{{ sid }} .anv__quick li + li { margin-top: 10px; }
+
+  /* page behind blurs */
+  #anv-{{ sid }} .anv__backdrop {
+    position: fixed; left: 0; right: 0; top: 0; height: 100vh; height: 100lvh;
+    z-index: 1;
+    background: color-mix(in srgb, #000 calc(var(--anv-dim) * 100%), transparent);
+    -webkit-backdrop-filter: blur(var(--anv-blur));
+    backdrop-filter: blur(var(--anv-blur));
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.32s var(--anv-ease), visibility 0s linear 0.32s;
+  }
+  #anv-{{ sid }}.is-open .anv__backdrop {
+    opacity: 1; visibility: visible;
+    transition: opacity 0.32s var(--anv-ease), visibility 0s;
+  }
+
+  /* ---- phones ---- */
+  #anv-{{ sid }} .anv__burger,
+  #anv-{{ sid }} .anv__mnav,
+  #anv-{{ sid }} .anv__msearch { display: none; }
+
+  @media (max-width: 833px) {
+    #anv-{{ sid }} .anv__bar { padding: 0 8px 0 10px; }
+    #anv-{{ sid }} .anv__links,
+    #anv-{{ sid }} .anv__panel,
+    #anv-{{ sid }} .anv__dsearch,
+    #anv-{{ sid }} .anv__backdrop { display: none; }
+    #anv-{{ sid }} .anv__msearch { display: flex; }
+    #anv-{{ sid }} .anv__icon { width: 44px; }
+    #anv-{{ sid }} .anv__icon svg { width: 18px; height: 18px; }
+    #anv-{{ sid }} .anv__burger {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: var(--anv-h); opacity: 0.85;
+    }
+    #anv-{{ sid }} .anv__burger span {
+      position: relative; display: block; width: 18px; height: 12px;
+    }
+    #anv-{{ sid }} .anv__burger i {
+      position: absolute; left: 0; width: 100%; height: 1.5px; border-radius: 1px;
+      background: currentColor;
+      transition: transform 0.24s var(--anv-ease) 0.1s, top 0.24s var(--anv-ease) 0.24s;
+    }
+    #anv-{{ sid }} .anv__burger i:first-child { top: 2px; }
+    #anv-{{ sid }} .anv__burger i:last-child { top: 9px; }
+    #anv-{{ sid }}.is-menu .anv__burger i {
+      top: 5.5px;
+      transition: top 0.24s var(--anv-ease), transform 0.24s var(--anv-ease) 0.2s;
+    }
+    #anv-{{ sid }}.is-menu .anv__burger i:first-child { transform: rotate(45deg); }
+    #anv-{{ sid }}.is-menu .anv__burger i:last-child { transform: rotate(-45deg); }
+
+    #anv-{{ sid }} .anv__mnav {
+      display: block; position: relative; overflow: hidden;
+      height: 0; visibility: hidden;
+      transition: height 0.4s var(--anv-ease), visibility 0s linear 0.4s;
+    }
+    #anv-{{ sid }}.is-menu .anv__mnav {
+      height: calc(100vh - var(--anv-h));
+      height: calc(100dvh - var(--anv-h));
+      visibility: visible;
+      transition: height 0.4s var(--anv-ease), visibility 0s;
+    }
+    #anv-{{ sid }}.is-menu .anv__surface { height: 100vh; height: 100dvh; transition: height 0.4s var(--anv-ease); }
+    #anv-{{ sid }} .anv__mmain,
+    #anv-{{ sid }} .anv__msub {
+      position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 18px 48px 48px;
+      transition: transform 0.36s var(--anv-ease), opacity 0.36s var(--anv-ease), visibility 0s;
+    }
+    #anv-{{ sid }}.is-sub .anv__mmain {
+      transform: translateX(-24%); opacity: 0; visibility: hidden;
+      transition: transform 0.36s var(--anv-ease), opacity 0.24s var(--anv-ease), visibility 0s linear 0.36s;
+    }
+    #anv-{{ sid }} .anv__msub {
+      transform: translateX(24%); opacity: 0; visibility: hidden;
+      transition: transform 0.36s var(--anv-ease), opacity 0.24s var(--anv-ease), visibility 0s linear 0.36s;
+    }
+    #anv-{{ sid }} .anv__msub.is-active {
+      transform: none; opacity: 1; visibility: visible;
+      transition: transform 0.36s var(--anv-ease), opacity 0.36s var(--anv-ease), visibility 0s;
+    }
+    #anv-{{ sid }} .anv__mmain li {
+      opacity: 0; transform: translateY(-10px);
+      transition: opacity 0.2s var(--anv-ease), transform 0.2s var(--anv-ease);
+    }
+    #anv-{{ sid }}.is-menu.is-shown .anv__mmain li {
+      opacity: 1; transform: none;
+      transition: opacity 0.4s var(--anv-out), transform 0.4s var(--anv-out);
+      transition-delay: calc(120ms + var(--j) * 25ms);
+    }
+    #anv-{{ sid }} .anv__mmain a,
+    #anv-{{ sid }} .anv__mmain button {
+      display: flex; width: 100%; align-items: center; justify-content: space-between;
+      padding: 7px 0; text-align: left;
+      font-family: var(--heading-font-stack); font-weight: var(--heading-font-weight);
+      letter-spacing: var(--heading-letterspacing);
+      font-size: calc(var(--anv-big) + 4px); line-height: 1.2;
+    }
+    #anv-{{ sid }} .anv__mmain svg,
+    #anv-{{ sid }} .anv__back svg { width: 9px; height: 16px; color: var(--anv-muted); flex: none; }
+    #anv-{{ sid }} .anv__mmain svg { transform: scaleX(-1); }
+    #anv-{{ sid }} .anv__back { display: flex; align-items: center; height: 36px; margin: -6px 0 12px -4px; padding: 0 4px; }
+    #anv-{{ sid }} .anv__mcols { display: block; }
+    #anv-{{ sid }} .anv__mcols .anv__col { padding: 0; }
+    #anv-{{ sid }} .anv__mcols .anv__col + .anv__col { margin-top: 34px; }
+    #anv-{{ sid }} .anv__mcols .anv__col a { font-size: 17px; }
+    #anv-{{ sid }} .anv__mcols .anv__col--big a { font-size: calc(var(--anv-big) + 4px); }
+    #anv-{{ sid }} .anv__mcols li + li { margin-top: 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #anv-{{ sid }} *, #anv-{{ sid }} *::before, #anv-{{ sid }} *::after {
+      transition-duration: 0.01ms !important; transition-delay: 0s !important;
+    }
+  }
+</style>
+
+<nav id="anv-{{ sid }}" class="anv" aria-label="{{ section.settings.aria_label | escape }}" data-anv>
+  <div class="anv__backdrop" data-close></div>
+  <div class="anv__wrap" data-wrap>
+    <div class="anv__surface"></div>
+    <div class="anv__bar">
+      <a class="anv__logo" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }}">
+        {%- if section.settings.logo != blank -%}
+          {{ section.settings.logo | image_url: width: 400 | image_tag: alt: shop.name, loading: 'eager', widths: '160, 240, 400' }}
+        {%- else -%}
+          {{ shop.name | escape }}
+        {%- endif -%}
+      </a>
+
+      <ul class="anv__links">
+        {%- if menu != blank -%}
+          {%- for link in menu.links -%}
+            {%- liquid
+              assign key = 'm' | append: forloop.index
+              assign link_title = link.title | downcase | strip
+              assign has_dd = false
+              if link.links.size > 0
+                assign has_dd = true
+              endif
+              for b in section.blocks
+                assign bt = b.settings.item | downcase | strip
+                if bt == link_title and bt != blank
+                  assign has_dd = true
+                endif
+              endfor
+            -%}
+            <li style="display:contents">
+              <a
+                class="anv__link{% if link.current or link.child_active %} is-current{% endif %}"
+                href="{{ link.url }}"
+                {% if has_dd %}data-open="{{ key }}" aria-haspopup="true" aria-expanded="false"{% else %}data-plain{% endif %}
+              >{{ link.title | escape }}</a>
+            </li>
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+
+      <div class="anv__icons">
+        {%- if section.settings.show_search -%}
+          <a class="anv__icon anv__dsearch" href="{{ routes.search_url }}" data-open="search" aria-label="Search" aria-expanded="false">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="m10.7 10.7 4.3 4.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </a>
+          <a class="anv__icon anv__msearch" href="{{ routes.search_url }}" aria-label="Search">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="m10.7 10.7 4.3 4.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.show_account and shop.customer_accounts_enabled -%}
+          <a class="anv__icon anv__dsearch" href="{{ routes.account_url }}" aria-label="Account">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.2" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2 15c.6-3 3-4.6 6-4.6s5.4 1.6 6 4.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </a>
+        {%- endif -%}
+        <a
+          class="anv__icon"
+          href="{{ routes.cart_url }}"
+          aria-label="{{ 'layout.cart.title' | t }}"
+          x-data
+          {% if settings.cart_type == 'modal' and template != 'cart' %}@click.prevent="$store.modals.open('cart')"{% endif %}
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.8 5.2h10.4l-.8 9.3H3.6z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 7V4.6a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <span
+            class="anv__count"
+            data-n="{{ cart.item_count }}"
+            x-effect="if ($store.cart_count) { $el.textContent = $store.cart_count.count; $el.dataset.n = $store.cart_count.count }"
+          >{{ cart.item_count }}</span>
+        </a>
+        <button type="button" class="anv__burger" data-burger aria-label="{{ section.settings.menu_label | escape }}" aria-expanded="false">
+          <span><i></i><i></i></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="anv__panel" data-panel>
+      {{ dd_desktop }}
+      {%- if section.settings.show_search -%}
+        <div class="anv__dd anv__search" data-dd="search">
+          <div class="anv__ddin">
+            <form action="{{ routes.search_url }}" method="get" role="search" style="--i: 1">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="m10.7 10.7 4.3 4.3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              <input type="search" name="q" placeholder="{{ section.settings.search_placeholder | escape }}" aria-label="{{ section.settings.search_placeholder | escape }}" autocomplete="off">
+            </form>
+            {%- assign ql = section.settings.quick_links -%}
+            {%- if ql != blank and ql.links.size > 0 -%}
+              <div class="anv__quick">
+                <p class="anv__colhead" style="--i: 2">{{ section.settings.quick_heading | escape }}</p>
+                <ul>
+                  {%- for l in ql.links -%}
+                    <li style="--i: {{ forloop.index | plus: 2 }}"><a href="{{ l.url }}">{{ l.title | escape }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              </div>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endif -%}
+    </div>
+
+    <div class="anv__mnav" data-mnav>
+      <ul class="anv__mmain">
+        {%- if menu != blank -%}
+          {%- for link in menu.links -%}
+            {%- liquid
+              assign key = 'm' | append: forloop.index
+              assign link_title = link.title | downcase | strip
+              assign has_dd = false
+              if link.links.size > 0
+                assign has_dd = true
+              endif
+              for b in section.blocks
+                assign bt = b.settings.item | downcase | strip
+                if bt == link_title and bt != blank
+                  assign has_dd = true
+                endif
+              endfor
+            -%}
+            <li style="--j: {{ forloop.index }}">
+              {%- if has_dd -%}
+                <button type="button" data-sub-open="{{ key }}">{{ link.title | escape }}<svg viewBox="0 0 9 16" aria-hidden="true"><path d="M8 1 1 8l7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              {%- else -%}
+                <a href="{{ link.url }}">{{ link.title | escape }}</a>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        {%- endif -%}
+      </ul>
+      {{ dd_mobile }}
+    </div>
+  </div>
+</nav>
+
+<script>
+  (function () {
+    function init(root) {
+      if (!root || root.__anv) return;
+      root.__anv = true;
+      var wrap = root.querySelector('[data-wrap]');
+      var panel = root.querySelector('[data-panel]');
+      var openers = root.querySelectorAll('.anv__links [data-open], .anv__dsearch[data-open]');
+      var current = null;
+      var closeTimer = null;
+      var desktop = window.matchMedia('(min-width: 834px)');
+      var finePointer = window.matchMedia('(hover: hover)');
+
+      function dd(key) { return panel.querySelector('[data-dd="' + key + '"]'); }
+
+      function open(key) {
+        clearTimeout(closeTimer);
+        if (current === key) return;
+        var next = dd(key);
+        if (!next) return close();
+        if (current) {
+          var prev = dd(current);
+          if (prev) prev.classList.remove('is-active', 'is-shown');
+        }
+        openers.forEach(function (o) { o.setAttribute('aria-expanded', o.dataset.open === key ? 'true' : 'false'); });
+        current = key;
+        next.classList.add('is-active');
+        root.style.setProperty('--anv-ph', next.offsetHeight + 'px');
+        root.classList.add('is-open');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            if (current === key) next.classList.add('is-shown');
+          });
+        });
+        if (key === 'search') {
+          var input = next.querySelector('input');
+          if (input) setTimeout(function () { input.focus({ preventScroll: true }); }, 120);
+        }
+      }
+
+      function close() {
+        clearTimeout(closeTimer);
+        if (!current) return;
+        var prev = dd(current);
+        current = null;
+        openers.forEach(function (o) { o.setAttribute('aria-expanded', 'false'); });
+        if (prev) prev.classList.remove('is-shown');
+        root.style.setProperty('--anv-ph', '0px');
+        root.classList.remove('is-open');
+        setTimeout(function () { if (prev && prev.dataset.dd !== current) prev.classList.remove('is-active'); }, 320);
+      }
+
+      function closeSoon() {
+        clearTimeout(closeTimer);
+        closeTimer = setTimeout(close, 120);
+      }
+
+      openers.forEach(function (o) {
+        var key = o.dataset.open;
+        if (key !== 'search') {
+          o.addEventListener('mouseenter', function () { if (desktop.matches) open(key); });
+          o.addEventListener('focus', function () { if (desktop.matches && current) open(key); });
+        }
+        o.addEventListener('click', function (e) {
+          if (!desktop.matches) return;
+          if (key === 'search') {
+            e.preventDefault();
+            current === 'search' ? close() : open('search');
+            return;
+          }
+          /* touch screens wide enough for the desktop bar: first tap opens */
+          if (!finePointer.matches && current !== key) { e.preventDefault(); open(key); }
+        });
+        o.addEventListener('keydown', function (e) {
+          if ((e.key === 'ArrowDown' || e.key === ' ') && key !== 'search') {
+            e.preventDefault();
+            open(key);
+            var first = dd(key) && dd(key).querySelector('a');
+            if (first) setTimeout(function () { first.focus(); }, 60);
+          }
+        });
+      });
+      root.querySelectorAll('.anv__links [data-plain], .anv__logo').forEach(function (p) {
+        p.addEventListener('mouseenter', function () { if (current && current !== 'search') closeSoon(); });
+      });
+      wrap.addEventListener('mouseenter', function () { clearTimeout(closeTimer); });
+      wrap.addEventListener('mouseleave', function () { if (current && current !== 'search') closeSoon(); });
+      root.querySelector('[data-close]').addEventListener('click', close);
+      root.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { close(); closeMenu(); }
+      });
+      root.addEventListener('focusout', function (e) {
+        if (!root.contains(e.relatedTarget) && current) closeSoon();
+      });
+      window.addEventListener('resize', function () {
+        if (current) {
+          var a = dd(current);
+          if (a) root.style.setProperty('--anv-ph', a.offsetHeight + 'px');
+        }
+      });
+
+      /* phones */
+      var burger = root.querySelector('[data-burger]');
+      function openMenu() {
+        root.classList.add('is-menu');
+        burger.setAttribute('aria-expanded', 'true');
+        document.documentElement.style.overflow = 'hidden';
+        requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.add('is-shown'); }); });
+      }
+      function closeMenu() {
+        if (!root.classList.contains('is-menu')) return;
+        root.classList.remove('is-menu', 'is-shown', 'is-sub');
+        burger.setAttribute('aria-expanded', 'false');
+        document.documentElement.style.overflow = '';
+        root.querySelectorAll('.anv__msub').forEach(function (s) { s.classList.remove('is-active', 'is-shown'); });
+      }
+      burger.addEventListener('click', function () {
+        root.classList.contains('is-menu') ? closeMenu() : openMenu();
+      });
+      root.querySelectorAll('[data-sub-open]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var sub = root.querySelector('[data-sub="' + b.dataset.subOpen + '"]');
+          if (!sub) return;
+          sub.scrollTop = 0;
+          root.classList.add('is-sub');
+          sub.classList.add('is-active');
+          requestAnimationFrame(function () { requestAnimationFrame(function () { sub.classList.add('is-shown'); }); });
+        });
+      });
+      root.querySelectorAll('[data-back]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var sub = b.closest('.anv__msub');
+          root.classList.remove('is-sub');
+          sub.classList.remove('is-active', 'is-shown');
+        });
+      });
+      desktop.addEventListener('change', function () { close(); closeMenu(); });
+    }
+
+    init(document.getElementById('anv-{{ sid }}'));
+    document.addEventListener('shopify:section:load', function (e) {
+      init(e.target.querySelector('[data-anv]'));
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Apple navbar",
+  "tag": "header",
+  "class": "anv-section",
+  "limit": 1,
+  "enabled_on": { "groups": ["header"] },
+  "settings": [
+    { "type": "header", "content": "Content" },
+    { "type": "image_picker", "id": "logo", "label": "Logo" },
+    { "type": "range", "id": "logo_width", "min": 30, "max": 200, "step": 2, "unit": "px", "label": "Logo width", "default": 70 },
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu", "info": "Child links become dropdowns. Add a Dropdown block to give any link its own columns." },
+    { "type": "text", "id": "all_label", "label": "\"See all\" link prefix", "default": "All" },
+    { "type": "checkbox", "id": "show_search", "label": "Show search", "default": true },
+    { "type": "text", "id": "search_placeholder", "label": "Search placeholder", "default": "Search notebooks" },
+    { "type": "text", "id": "quick_heading", "label": "Quick links heading", "default": "Quick links" },
+    { "type": "link_list", "id": "quick_links", "label": "Quick links menu" },
+    { "type": "checkbox", "id": "show_account", "label": "Show account icon", "default": false },
+    { "type": "header", "content": "Layout" },
+    { "type": "checkbox", "id": "sticky", "label": "Stick to top while scrolling", "default": true },
+    { "type": "range", "id": "bar_height", "min": 40, "max": 80, "step": 2, "unit": "px", "label": "Bar height", "default": 48 },
+    { "type": "range", "id": "content_width", "min": 800, "max": 1600, "step": 20, "unit": "px", "label": "Content width", "default": 1040 },
+    { "type": "range", "id": "links_spread", "min": 300, "max": 1200, "step": 20, "unit": "px", "label": "Links spread", "default": 640 },
+    { "type": "range", "id": "link_size", "min": 11, "max": 18, "step": 1, "unit": "px", "label": "Link size", "default": 13 },
+    { "type": "range", "id": "big_link_size", "min": 16, "max": 36, "step": 1, "unit": "px", "label": "Dropdown big link size", "default": 24 },
+    { "type": "header", "content": "Colours" },
+    { "type": "color", "id": "bar_color", "label": "Bar", "default": "#f5f3ee" },
+    { "type": "range", "id": "bar_opacity", "min": 0, "max": 100, "step": 5, "unit": "%", "label": "Bar opacity", "default": 80 },
+    { "type": "color", "id": "panel_color", "label": "Dropdown panel", "default": "#f5f3ee" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#5d0565" },
+    { "type": "color", "id": "muted_color", "label": "Small headings and hover", "default": "#8a6a8d" },
+    { "type": "checkbox", "id": "show_border", "label": "Hairline under the bar", "default": true },
+    { "type": "range", "id": "backdrop_blur", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Page blur when open", "default": 20 },
+    { "type": "range", "id": "backdrop_dim", "min": 0, "max": 80, "step": 5, "unit": "%", "label": "Page dim when open", "default": 20 },
+    { "type": "header", "content": "Accessibility" },
+    { "type": "text", "id": "aria_label", "label": "Navigation label", "default": "Main" },
+    { "type": "text", "id": "menu_label", "label": "Menu button label", "default": "Menu" },
+    { "type": "text", "id": "back_label", "label": "Back button label", "default": "Back" }
+  ],
+  "blocks": [
+    {
+      "type": "dropdown",
+      "name": "Dropdown",
+      "settings": [
+        { "type": "text", "id": "item", "label": "Menu link title", "info": "The top-level link this opens from, e.g. Shop" },
+        { "type": "text", "id": "heading_1", "label": "Column 1 heading", "info": "Column 1 shows big links" },
+        { "type": "link_list", "id": "menu_1", "label": "Column 1 menu" },
+        { "type": "text", "id": "heading_2", "label": "Column 2 heading" },
+        { "type": "link_list", "id": "menu_2", "label": "Column 2 menu" },
+        { "type": "text", "id": "heading_3", "label": "Column 3 heading" },
+        { "type": "link_list", "id": "menu_3", "label": "Column 3 menu" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Apple navbar" }]
+}
+{% endschema %}
