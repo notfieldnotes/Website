@@ -1,0 +1,182 @@
+{% comment %}
+  Image trail - the Skiper UI "image cursor trail" (skiper18) as a section.
+
+  As the cursor moves across the section, images pop up along its path one
+  after another: each one scales in where the cursor is, holds for a moment
+  and shrinks away, so a short trail of pictures follows the pointer. It works
+  with a finger on phones too.
+
+  Images come from the blocks; with no blocks it uses the product photos of the
+  chosen collection (or the whole catalogue).
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id | replace: '_', '-'
+  assign source = s.collection.products | default: collections.all.products
+-%}
+
+<section class="itr" id="itr-{{ sid }}" data-itr
+  data-gap="{{ s.spacing }}" data-life="{{ s.life }}"
+  style="--itr-bg:{{ s.background_color }};--itr-ink:{{ s.text_color }};--itr-h:{{ s.height }}vh;--itr-w:{{ s.image_size }}px;--itr-wm:{{ s.mobile_image_size }}px;--itr-r:{{ s.radius }}px;">
+
+  <div class="itr__pool" aria-hidden="true">
+    {%- if section.blocks.size > 0 -%}
+      {%- for b in section.blocks -%}
+        {%- if b.settings.image != blank -%}
+          <img data-itr-src src="{{ b.settings.image | image_url: width: 600 }}" alt="" width="{{ b.settings.image.width }}" height="{{ b.settings.image.height }}" loading="lazy" {{ b.shopify_attributes }}>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- else -%}
+      {%- for p in source limit: 12 -%}
+        {%- if p.featured_image != blank -%}
+          <img data-itr-src src="{{ p.featured_image | image_url: width: 600 }}" alt="" width="{{ p.featured_image.width }}" height="{{ p.featured_image.height }}" loading="lazy">
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+  </div>
+
+  <div class="itr__stage" data-itr-stage></div>
+
+  <div class="itr__copy">
+    {%- if s.kicker != blank -%}<p class="itr__kicker">{{ s.kicker | escape }}</p>{%- endif -%}
+    {%- if s.heading != blank -%}<h2 class="itr__heading">{{ s.heading | escape }}</h2>{%- endif -%}
+    {%- if s.hint != blank -%}<p class="itr__hint">{{ s.hint | escape }}</p>{%- endif -%}
+  </div>
+</section>
+
+<style>
+  #itr-{{ sid }} {
+    position: relative; height: var(--itr-h); min-height: 22rem; overflow: hidden;
+    background: var(--itr-bg); color: var(--itr-ink); cursor: crosshair;
+    display: grid; place-items: center; text-align: center; touch-action: pan-y;
+  }
+  #itr-{{ sid }} .itr__pool { display: none; }
+  #itr-{{ sid }} .itr__stage { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  #itr-{{ sid }} .itr__img {
+    position: absolute; left: 0; top: 0; width: var(--itr-wm); height: auto;
+    border-radius: var(--itr-r); object-fit: cover; will-change: transform, opacity;
+    box-shadow: 0 .8rem 1.6rem rgba(0,0,0,.18); transform-origin: 50% 50%;
+  }
+  #itr-{{ sid }} .itr__copy { position: relative; z-index: 2; pointer-events: none; padding: 0 5vw; mix-blend-mode: difference; color: #fff; }
+  #itr-{{ sid }}.itr--plain .itr__copy { mix-blend-mode: normal; color: var(--itr-ink); }
+  #itr-{{ sid }} .itr__kicker { margin: 0 0 .8rem; font-family: var(--main-font-stack, sans-serif); font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; }
+  #itr-{{ sid }} .itr__heading {
+    margin: 0; color: inherit; font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400);
+    font-size: clamp(2.2rem, 7vw, 7.5rem); line-height: .95; text-transform: uppercase; letter-spacing: var(--heading-letterspacing, 0);
+  }
+  #itr-{{ sid }} .itr__hint { margin: 1rem 0 0; font-family: var(--main-font-stack, sans-serif); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; opacity: .7; }
+  @media (min-width: 750px) {
+    #itr-{{ sid }} .itr__img { width: var(--itr-w); }
+  }
+</style>
+
+<script>
+  (function () {
+    var host = document.getElementById('itr-{{ sid }}');
+    if (!host || host.dataset.itrReady) return;
+    host.dataset.itrReady = '1';
+
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if ({{ s.blend | json }} !== true) host.classList.add('itr--plain');
+
+    var stage = host.querySelector('[data-itr-stage]');
+    var srcs = [].map.call(host.querySelectorAll('[data-itr-src]'), function (i) { return i.currentSrc || i.src; });
+    if (!srcs.length) return;
+
+    /* warm the images so the first pass is not empty */
+    srcs.forEach(function (u) { var im = new Image(); im.src = u; });
+
+    var GAP = parseFloat(host.dataset.gap) || 80;      /* px the pointer travels between images */
+    var LIFE = parseFloat(host.dataset.life) || 900;   /* ms each image stays */
+    var idx = 0, last = null, z = 1;
+
+    function spawn(x, y, dx, dy) {
+      var img = document.createElement('img');
+      img.className = 'itr__img';
+      img.alt = '';
+      img.src = srcs[idx % srcs.length];
+      idx++;
+      img.style.zIndex = z++;
+      stage.appendChild(img);
+
+      var w = img.offsetWidth || 200;
+      var h = img.offsetHeight || w * 1.25;
+      var tilt = (Math.random() - 0.5) * 16;
+      /* the image drifts a little further along the direction of travel */
+      var len = Math.hypot(dx, dy) || 1;
+      var drift = calm ? 0 : 24;
+      var ex = x + (dx / len) * drift, ey = y + (dy / len) * drift;
+
+      var start = 'translate(' + (x - w / 2) + 'px,' + (y - h / 2) + 'px) rotate(' + tilt + 'deg) scale(' + (calm ? 1 : 0.4) + ')';
+      var mid = 'translate(' + (ex - w / 2) + 'px,' + (ey - h / 2) + 'px) rotate(' + tilt + 'deg) scale(1)';
+      var end = 'translate(' + (ex - w / 2) + 'px,' + (ey - h / 2 + (calm ? 0 : 20)) + 'px) rotate(' + tilt + 'deg) scale(' + (calm ? 1 : 0.2) + ')';
+
+      if (img.animate) {
+        var a = img.animate([
+          { transform: start, opacity: 0 },
+          { transform: mid, opacity: 1, offset: 0.22 },
+          { transform: mid, opacity: 1, offset: 0.6 },
+          { transform: end, opacity: 0 }
+        ], { duration: LIFE, easing: 'cubic-bezier(.22,.8,.3,1)', fill: 'forwards' });
+        a.onfinish = function () { img.remove(); };
+      } else {
+        img.style.transform = mid;
+        setTimeout(function () { img.remove(); }, LIFE);
+      }
+    }
+
+    function point(clientX, clientY) {
+      var r = host.getBoundingClientRect();
+      var x = clientX - r.left, y = clientY - r.top;
+      if (!last) { last = { x: x, y: y }; return; }
+      var dx = x - last.x, dy = y - last.y;
+      if (Math.hypot(dx, dy) < GAP) return;
+      spawn(x, y, dx, dy);
+      last = { x: x, y: y };
+    }
+
+    host.addEventListener('pointermove', function (e) { point(e.clientX, e.clientY); });
+    host.addEventListener('pointerleave', function () { last = null; });
+    host.addEventListener('pointerdown', function (e) { last = null; point(e.clientX, e.clientY); });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Image trail",
+  "tag": "section",
+  "class": "section-image-trail",
+  "settings": [
+    { "type": "paragraph", "content": "Images pop up along the cursor's path and fade away, the Skiper UI image cursor trail. Add image blocks, or leave it empty to use product photos from a collection." },
+    { "type": "text", "id": "kicker", "label": "Small label", "default": "Move your cursor" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Not Field Notes" },
+    { "type": "text", "id": "hint", "label": "Hint below", "default": "Every page has a story" },
+    { "type": "checkbox", "id": "blend", "label": "Heading inverts over the images", "default": true },
+    { "type": "collection", "id": "collection", "label": "Collection for images", "info": "Used when there are no image blocks. Empty uses your whole catalogue." },
+    { "type": "header", "content": "Trail" },
+    { "type": "range", "id": "image_size", "label": "Image size", "min": 120, "max": 400, "step": 10, "unit": "px", "default": 220 },
+    { "type": "range", "id": "mobile_image_size", "label": "Image size on phones", "min": 80, "max": 260, "step": 10, "unit": "px", "default": 140 },
+    { "type": "range", "id": "spacing", "label": "Distance between images", "min": 30, "max": 200, "step": 10, "unit": "px", "default": 80 },
+    { "type": "range", "id": "life", "label": "How long each image stays", "min": 400, "max": 2000, "step": 100, "unit": "ms", "default": 900 },
+    { "type": "range", "id": "radius", "label": "Corner radius", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 6 },
+    { "type": "header", "content": "Look" },
+    { "type": "range", "id": "height", "label": "Height", "min": 40, "max": 120, "step": 5, "unit": "vh", "default": 85 },
+    { "type": "color", "id": "background_color", "label": "Background", "default": "#efe9e0" },
+    { "type": "color", "id": "text_color", "label": "Text", "default": "#141414" }
+  ],
+  "blocks": [
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" }
+      ]
+    }
+  ],
+  "max_blocks": 24,
+  "presets": [
+    { "name": "Image trail" }
+  ]
+}
+{% endschema %}
