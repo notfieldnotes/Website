@@ -23,7 +23,7 @@
 -%}
 
 <section class="aws" id="aws-{{ sid }}" data-aws data-pin="{{ s.zoom_length }}"
-  style="--aws-dark:{{ s.dark_color }};--aws-light:{{ s.light_color }};--aws-cream:{{ s.cream_color }};--aws-ink:{{ s.ink_color }};--aws-gold:{{ s.gold_color }};--aws-pin:{{ s.zoom_length }}vh;--aws-sticker:{{ s.sticker_color }};--aws-line:{{ s.line_color }};--aws-line-o:{{ s.line_strength | divided_by: 100.0 }};">
+  style="--aws-dark:{{ s.dark_color }};--aws-light:{{ s.light_color }};--aws-cream:{{ s.cream_color }};--aws-ink:{{ s.ink_color }};--aws-gold:{{ s.gold_color }};--aws-pin:{{ s.zoom_length }}vh;--aws-sticker:{{ s.sticker_color }};--aws-card:{{ s.card_size }}%;--aws-line:{{ s.line_color }};--aws-line-o:{{ s.line_strength | divided_by: 100.0 }};">
 
   {%- comment -%} 1. the globe {%- endcomment -%}
   <div class="aws__zoom" data-aws-zoom>
@@ -90,8 +90,8 @@
               </ul>
             {%- endif -%}
             <div class="aws__tags">
-              {%- if i.tag1_label != blank -%}<a class="aws__tag" href="{{ i.tag1_link | default: '#' }}" style="background:{{ i.tag1_color }};">{{ i.tag1_label | escape }} &rarr;</a>{%- endif -%}
-              {%- if i.tag2_label != blank -%}<a class="aws__tag" href="{{ i.tag2_link | default: '#' }}" style="background:{{ i.tag2_color }};{% if i.tag2_dark %}color:#fff;{% endif %}">{{ i.tag2_label | escape }} &rarr;</a>{%- endif -%}
+              {%- if i.tag1_label != blank -%}<a class="aws__tag" href="{{ i.tag1_link | default: '#' }}" style="background:{{ i.tag1_color }};{% if i.tag1_text_color != blank %}color:{{ i.tag1_text_color }};{% endif %}">{{ i.tag1_label | escape }} &rarr;</a>{%- endif -%}
+              {%- if i.tag2_label != blank -%}<a class="aws__tag" href="{{ i.tag2_link | default: '#' }}" style="background:{{ i.tag2_color }};{% if i.tag2_text_color != blank %}color:{{ i.tag2_text_color }};{% elsif i.tag2_dark %}color:#fff;{% endif %}">{{ i.tag2_label | escape }} &rarr;</a>{%- endif -%}
             </div>
           </div>
 
@@ -235,9 +235,10 @@
   #aws-{{ sid }} .aws__tag { padding: .45em .8em; color: var(--aws-ink); text-decoration: none; font-family: var(--main-font-stack, sans-serif); font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-1deg); }
   #aws-{{ sid }} .aws__tag:hover { filter: brightness(.94); }
 
-  #aws-{{ sid }} .aws__card { position: relative; width: 100%; aspect-ratio: 1.36; border-radius: 1.6rem; overflow: hidden; }
+  #aws-{{ sid }} .aws__card { position: relative; width: 100%; max-width: 26rem; aspect-ratio: 1.36; border-radius: 1.6rem; overflow: hidden; container-type: inline-size; }
   @media (min-width: 750px) {
-    #aws-{{ sid }} .aws__row { grid-template-columns: 1fr 41%; align-items: start; gap: 4vw; }
+    #aws-{{ sid }} .aws__row { grid-template-columns: 1fr var(--aws-card, 30%); align-items: start; gap: 4vw; }
+    #aws-{{ sid }} .aws__card { max-width: none; }
   }
 
   /* branding: a selection in a design tool */
@@ -263,7 +264,7 @@
   #aws-{{ sid }} .aws__page { padding: .9rem 1.1rem; }
   #aws-{{ sid }} .aws__brandname { display: flex; justify-content: space-between; margin: 0 0 1rem; font: 600 .55rem var(--main-font-stack, sans-serif); letter-spacing: .02em; }
   #aws-{{ sid }} .aws__brandname span { width: 30%; height: 2px; margin-top: .3rem; background: repeating-linear-gradient(90deg, #bbb 0 18%, transparent 18% 34%); }
-  #aws-{{ sid }} .aws__typed { margin: 0; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(1.1rem, 2vw, 2.2rem); line-height: 1; color: #111; }
+  #aws-{{ sid }} .aws__typed { margin: 0; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.9rem, 8cqi, 2.2rem); line-height: 1; color: #111; }
   #aws-{{ sid }} .aws__caret { display: inline-block; width: 2px; height: .8em; margin-left: .06em; background: #111; vertical-align: -.05em; animation: aws-blink-{{ sid }} 1s steps(1) infinite; }
 
   /* video: a camera viewfinder */
@@ -278,7 +279,7 @@
   #aws-{{ sid }} .aws__tc { position: absolute; right: 1.4rem; top: .35rem; margin: 0; font-size: .5rem; letter-spacing: .08em; }
   #aws-{{ sid }} .aws__focus { position: absolute; left: 50%; top: 36%; width: 14%; aspect-ratio: 1; border: 1.5px solid #dff04a; transform: translate(-50%, -50%); }
   #aws-{{ sid }} .aws__cross { position: absolute; left: 30%; right: 30%; top: 36%; height: 1px; background: rgba(243,236,226,.5); }
-  #aws-{{ sid }} .aws__flabel { position: absolute; left: 50%; top: 55%; margin: 0; padding: .15em .45em; background: #f59ad0; color: #111; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.8rem, 1.3vw, 1.4rem); line-height: 1.1; white-space: nowrap; transform: translateX(-50%) rotate(-3deg); }
+  #aws-{{ sid }} .aws__flabel { position: absolute; left: 50%; top: 55%; margin: 0; padding: .15em .45em; background: #f59ad0; color: #111; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.6rem, 5cqi, 1.4rem); line-height: 1.1; white-space: nowrap; transform: translateX(-50%) rotate(-3deg); }
   #aws-{{ sid }} .aws__timeline { position: absolute; left: 0; right: 0; bottom: 0; height: 16%; display: flex; flex-wrap: wrap; align-content: space-between; gap: 6% 1.5%; padding-top: 3%; }
   #aws-{{ sid }} .aws__timeline span { height: 38%; width: var(--w); background: var(--c); border-radius: 2px; }
   #aws-{{ sid }} .aws__head-line { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: #ff3b30; animation: aws-play-{{ sid }} 6s linear infinite; animation-play-state: paused; }
@@ -292,7 +293,7 @@
     transition: transform .5s cubic-bezier(.3,1.6,.5,1) var(--d), opacity .25s ease var(--d);
   }
   #aws-{{ sid }} .aws__note-card small { display: block; margin-bottom: .35rem; font: .4rem var(--main-font-stack, sans-serif); letter-spacing: .06em; opacity: .7; }
-  #aws-{{ sid }} .aws__note-card span { display: block; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.6rem, .95vw, 1.05rem); line-height: 1; text-transform: uppercase; }
+  #aws-{{ sid }} .aws__note-card span { display: block; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.4rem, 2.5cqi, 1rem); line-height: 1.05; text-transform: uppercase; }
   #aws-{{ sid }} .aws__note-card--1 { left: 7%; top: 9%; }
   #aws-{{ sid }} .aws__note-card--2 { left: 35%; top: 6%; }
   #aws-{{ sid }} .aws__note-card--3 { left: 9%; top: 48%; }
@@ -303,7 +304,7 @@
     transform: scale(0) rotate(-20deg); transition: transform .55s cubic-bezier(.3,1.6,.5,1) 1.3s;
   }
   #aws-{{ sid }} .aws__result small { font: .4rem var(--main-font-stack, sans-serif); color: #dff04a; margin-bottom: .2rem; }
-  #aws-{{ sid }} .aws__result span { font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.6rem, 1.05vw, 1.15rem); line-height: 1; padding: 0 .6rem; }
+  #aws-{{ sid }} .aws__result span { font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.4rem, 2.9cqi, 1.1rem); line-height: 1.05; padding: 0 .5rem; }
   #aws-{{ sid }} .aws__foot { position: absolute; left: 7%; bottom: 6%; margin: 0; padding: .3em .6em; background: #fff; font: .45rem var(--main-font-stack, sans-serif); letter-spacing: .06em; opacity: 0; transition: opacity .4s ease 1.7s; }
   #aws-{{ sid }} .is-in .aws__note-card { transform: rotate(var(--r)) scale(1); opacity: 1; }
   #aws-{{ sid }} .is-in .aws__result { transform: scale(1) rotate(0deg); }
@@ -567,6 +568,7 @@
     { "type": "text", "id": "sticker_text", "label": "Sticker", "default": "YOUR DESIGN" },
     { "type": "range", "id": "sticker_x", "label": "Sticker position", "min": 0, "max": 80, "step": 2, "unit": "%", "default": 12 },
     { "type": "text", "id": "services_label", "label": "Label above the pills", "default": "SERVICES:" },
+    { "type": "range", "id": "card_size", "label": "Card size", "min": 20, "max": 45, "step": 1, "unit": "%", "default": 30, "info": "Width of the coloured cards on desktop." },
     { "type": "header", "content": "Colours" },
     { "type": "color", "id": "dark_color", "label": "Globe background", "default": "#0d2620" },
     { "type": "color", "id": "light_color", "label": "Globe text and lines", "default": "#f3ece2" },
@@ -596,10 +598,12 @@
         { "type": "text", "id": "tag1_label", "label": "Tag 1" },
         { "type": "url", "id": "tag1_link", "label": "Tag 1 link" },
         { "type": "color", "id": "tag1_color", "label": "Tag 1 colour", "default": "#ff7f50" },
+        { "type": "color", "id": "tag1_text_color", "label": "Tag 1 text colour", "info": "Leave clear for the section's text colour." },
         { "type": "text", "id": "tag2_label", "label": "Tag 2" },
         { "type": "url", "id": "tag2_link", "label": "Tag 2 link" },
         { "type": "color", "id": "tag2_color", "label": "Tag 2 colour", "default": "#dff04a" },
-        { "type": "checkbox", "id": "tag2_dark", "label": "Tag 2 has white text", "default": false }
+        { "type": "color", "id": "tag2_text_color", "label": "Tag 2 text colour", "info": "Leave clear for the section's text colour." },
+        { "type": "checkbox", "id": "tag2_dark", "label": "Tag 2 has white text", "default": false, "info": "Used only when Tag 2 text colour is clear." }
       ]
     }
   ],
