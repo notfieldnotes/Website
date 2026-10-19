@@ -15,6 +15,7 @@ vendor code, and the per-page settings live in Shopify's own template JSON.
 
 | File | What it does |
 | --- | --- |
+| `hover-expansion.liquid` | Skiper UI hover expansion: a row of image panels where the hovered one widens and shows its title and link; stacks with tap-to-open on phones; blocks or a collection's products |
 | `image-trail.liquid` | Skiper UI image cursor trail: images pop up along the pointer's path and fade away; uses image blocks or a collection's product photos |
 | `awards-services.liquid` | The sxlvx.de sequence: pinned globe with a spinning 3D ring of award names that the camera zooms into, a cream circle opening to fill the screen, then a stickered heading and sticky stacking service rows with animated cards |
 | `scroll-story.liquid` | The gsap.com/scroll opening: a paper plane loops through a pinned first scene and lands on the next line, a ball rides a glossy tube, then heading and buttons beside turning rings |
