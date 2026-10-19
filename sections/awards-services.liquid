@@ -22,10 +22,6 @@
   assign award_lines = s.award_note | newline_to_br | split: '<br />'
 -%}
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter+Tight:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-
 <section class="aws" id="aws-{{ sid }}" data-aws data-pin="{{ s.zoom_length }}"
   style="--aws-dark:{{ s.dark_color }};--aws-light:{{ s.light_color }};--aws-cream:{{ s.cream_color }};--aws-ink:{{ s.ink_color }};--aws-gold:{{ s.gold_color }};--aws-pin:{{ s.zoom_length }}vh;--aws-sticker:{{ s.sticker_color }};--aws-line:{{ s.line_color }};--aws-line-o:{{ s.line_strength | divided_by: 100.0 }};">
 
@@ -177,8 +173,8 @@
   #aws-{{ sid }} .aws__stage { position: relative; height: 100vh; overflow: hidden; }
 
   #aws-{{ sid }} .aws__top { position: absolute; left: 5vw; right: 5vw; top: 8vh; display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; z-index: 3; }
-  #aws-{{ sid }} .aws__awarded { margin: 0; color: inherit; font-family: 'Bebas Neue', var(--font-heading-family, sans-serif); font-weight: 400; font-size: clamp(2.4rem, 4.6vw, 5rem); line-height: .9; letter-spacing: .005em; }
-  #aws-{{ sid }} .aws__note { margin: .4rem 0 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: clamp(.55rem, .75vw, .75rem); letter-spacing: .08em; line-height: 1.7; opacity: .6; text-transform: uppercase; }
+  #aws-{{ sid }} .aws__awarded { margin: 0; color: inherit; font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400); font-size: clamp(1.8rem, 3.6vw, 4rem); line-height: .95; letter-spacing: var(--heading-letterspacing, 0); text-transform: uppercase; }
+  #aws-{{ sid }} .aws__note { margin: .4rem 0 0; font-family: var(--main-font-stack, sans-serif); font-size: clamp(.55rem, .75vw, .75rem); letter-spacing: .08em; line-height: 1.7; opacity: .6; text-transform: uppercase; }
 
   #aws-{{ sid }} .aws__world {
     --g: min(74vh, 58vw);
@@ -193,8 +189,8 @@
   #aws-{{ sid }} .aws__item { display: none; }
   #aws-{{ sid }} .aws__ch {
     position: absolute; left: 0; top: 0; white-space: pre;
-    font-family: 'Inter Tight', var(--font-body-family, sans-serif); font-weight: 700; line-height: 1;
-    font-size: calc(var(--g) * .06 * var(--k, 1)); letter-spacing: -.02em; color: var(--aws-light);
+    font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400); line-height: 1;
+    font-size: calc(var(--g) * .052 * var(--k, 1)); letter-spacing: 0; color: var(--aws-light);
     transform-origin: 50% 50%; backface-visibility: visible; will-change: transform, opacity;
   }
   #aws-{{ sid }} .aws__ch--small { font-weight: 500; font-size: calc(var(--g) * .024 * var(--k, 1)); letter-spacing: .04em; color: var(--aws-gold); text-transform: uppercase; }
@@ -204,7 +200,7 @@
 
   /* without the script: a plain static ring under the globe */
   #aws-{{ sid }}:not([data-aws-live]) .aws__ring { display: flex; flex-wrap: wrap; justify-content: center; gap: .6em; width: 120%; left: -10%; top: 56%; height: auto; }
-  #aws-{{ sid }}:not([data-aws-live]) .aws__item { display: inline; font-family: 'Inter Tight', sans-serif; font-weight: 700; font-size: calc(var(--g) * .05); }
+  #aws-{{ sid }}:not([data-aws-live]) .aws__item { display: inline; font-family: var(--main-font-stack, sans-serif); font-weight: 700; font-size: calc(var(--g) * .05); }
   #aws-{{ sid }}:not([data-aws-live]) .aws__item--small { font-size: calc(var(--g) * .022); color: var(--aws-gold); text-transform: uppercase; align-self: center; }
 
   /* ---------- 2. services ---------- */
@@ -212,13 +208,13 @@
   #aws-{{ sid }} .aws__head { padding: 26vh 0 10vh; }
   #aws-{{ sid }} .aws__title {
     position: relative; display: inline-block; margin: 0; color: var(--aws-ink);
-    font-family: 'Bebas Neue', var(--font-heading-family, sans-serif); font-weight: 400;
-    font-size: clamp(3.6rem, 10.5vw, 12rem); line-height: .86; letter-spacing: -.005em;
+    font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400);
+    font-size: clamp(2.4rem, 7vw, 8.4rem); line-height: .95; letter-spacing: var(--heading-letterspacing, 0); text-transform: uppercase;
   }
   #aws-{{ sid }} .aws__sticker {
     position: absolute; top: 34%; padding: .28em .55em .2em; border-radius: .25em;
     background: var(--aws-sticker); color: var(--aws-ink);
-    font-family: 'Bebas Neue', sans-serif; font-size: .2em; line-height: 1; letter-spacing: .02em; white-space: nowrap;
+    font-family: var(--heading-font-stack, sans-serif); font-size: .2em; line-height: 1; letter-spacing: .02em; white-space: nowrap;
     transform: rotate(-14deg); box-shadow: 0 .05em .12em rgba(0,0,0,.15);
   }
 
@@ -231,12 +227,12 @@
     border-top: 1px solid color-mix(in srgb, var(--aws-ink) 45%, transparent);
     min-height: 62vh;
   }
-  #aws-{{ sid }} .aws__name { margin: 0 0 1.6rem; color: var(--aws-ink); font-family: 'Bebas Neue', sans-serif; font-weight: 400; font-size: clamp(2.4rem, 4.4vw, 4.6rem); line-height: .9; }
-  #aws-{{ sid }} .aws__label { margin: 0 0 .9rem; font-family: 'Inter Tight', sans-serif; font-weight: 700; font-size: .8rem; letter-spacing: .02em; }
+  #aws-{{ sid }} .aws__name { margin: 0 0 1.6rem; color: var(--aws-ink); font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400); font-size: clamp(1.8rem, 3.2vw, 3.4rem); line-height: .95; text-transform: uppercase; }
+  #aws-{{ sid }} .aws__label { margin: 0 0 .9rem; font-family: var(--main-font-stack, sans-serif); font-weight: 700; font-size: .8rem; letter-spacing: .02em; }
   #aws-{{ sid }} .aws__pills { display: flex; flex-wrap: wrap; gap: .45rem; max-width: 34rem; margin: 0 0 1.3rem; padding: 0; list-style: none; }
-  #aws-{{ sid }} .aws__pills li { padding: .5em 1em; border-radius: 999px; background: #fff; border: 1px solid color-mix(in srgb, var(--aws-ink) 12%, transparent); font-family: 'Inter Tight', sans-serif; font-weight: 500; font-size: .66rem; letter-spacing: .02em; text-transform: uppercase; }
+  #aws-{{ sid }} .aws__pills li { padding: .5em 1em; border-radius: 999px; background: #fff; border: 1px solid color-mix(in srgb, var(--aws-ink) 12%, transparent); font-family: var(--main-font-stack, sans-serif); font-weight: 500; font-size: .66rem; letter-spacing: .02em; text-transform: uppercase; }
   #aws-{{ sid }} .aws__tags { display: flex; flex-wrap: wrap; gap: .6rem; }
-  #aws-{{ sid }} .aws__tag { padding: .45em .8em; color: var(--aws-ink); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-1deg); }
+  #aws-{{ sid }} .aws__tag { padding: .45em .8em; color: var(--aws-ink); text-decoration: none; font-family: var(--main-font-stack, sans-serif); font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-1deg); }
   #aws-{{ sid }} .aws__tag:hover { filter: brightness(.94); }
 
   #aws-{{ sid }} .aws__card { position: relative; width: 100%; aspect-ratio: 1.36; border-radius: 1.6rem; overflow: hidden; }
@@ -254,7 +250,7 @@
   #aws-{{ sid }} .aws__cursor { transform: translate(178px, 128px); transition: transform 1.1s cubic-bezier(.7,0,.2,1) .25s; }
   #aws-{{ sid }} .aws__cursor path { fill: #111; stroke: #fff; stroke-width: .8; }
   #aws-{{ sid }} .aws__cursor rect { fill: #dff04a; }
-  #aws-{{ sid }} .aws__cursor text { font: 600 5px 'JetBrains Mono', monospace; text-anchor: middle; fill: #111; }
+  #aws-{{ sid }} .aws__cursor text { font: 600 5px var(--main-font-stack, sans-serif); text-anchor: middle; fill: #111; }
   #aws-{{ sid }} .is-in .aws__half-light { transform: rotate(0deg); }
   #aws-{{ sid }} .is-in .aws__handles rect { opacity: 1; }
   #aws-{{ sid }} .is-in .aws__cursor { transform: translate(150px, 90px); }
@@ -263,15 +259,15 @@
   #aws-{{ sid }} .aws__browser { position: absolute; left: 9%; right: 9%; top: 9%; bottom: 13%; background: #fff; border: 2px solid #111; border-radius: .7rem; box-shadow: .45rem .45rem 0 #111; overflow: hidden; }
   #aws-{{ sid }} .aws__bar { display: flex; align-items: center; gap: .3rem; padding: .45rem .6rem; border-bottom: 2px solid #111; }
   #aws-{{ sid }} .aws__bar i { width: .45rem; height: .45rem; border: 1.5px solid #111; border-radius: 50%; }
-  #aws-{{ sid }} .aws__bar span { margin-left: .4rem; padding: .05rem .6rem; border: 1.5px solid #111; border-radius: 999px; font: .5rem 'JetBrains Mono', monospace; flex: 1; max-width: 60%; }
+  #aws-{{ sid }} .aws__bar span { margin-left: .4rem; padding: .05rem .6rem; border: 1.5px solid #111; border-radius: 999px; font: .5rem var(--main-font-stack, sans-serif); flex: 1; max-width: 60%; }
   #aws-{{ sid }} .aws__page { padding: .9rem 1.1rem; }
-  #aws-{{ sid }} .aws__brandname { display: flex; justify-content: space-between; margin: 0 0 1rem; font: 600 .55rem 'Inter Tight', sans-serif; letter-spacing: .02em; }
+  #aws-{{ sid }} .aws__brandname { display: flex; justify-content: space-between; margin: 0 0 1rem; font: 600 .55rem var(--main-font-stack, sans-serif); letter-spacing: .02em; }
   #aws-{{ sid }} .aws__brandname span { width: 30%; height: 2px; margin-top: .3rem; background: repeating-linear-gradient(90deg, #bbb 0 18%, transparent 18% 34%); }
-  #aws-{{ sid }} .aws__typed { margin: 0; font-family: 'Bebas Neue', sans-serif; font-size: clamp(1.4rem, 2.6vw, 2.8rem); line-height: 1; color: #111; }
+  #aws-{{ sid }} .aws__typed { margin: 0; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(1.1rem, 2vw, 2.2rem); line-height: 1; color: #111; }
   #aws-{{ sid }} .aws__caret { display: inline-block; width: 2px; height: .8em; margin-left: .06em; background: #111; vertical-align: -.05em; animation: aws-blink-{{ sid }} 1s steps(1) infinite; }
 
   /* video: a camera viewfinder */
-  #aws-{{ sid }} .aws__finder { position: absolute; inset: 7%; color: #f3ece2; font-family: 'JetBrains Mono', monospace; }
+  #aws-{{ sid }} .aws__finder { position: absolute; inset: 7%; color: #f3ece2; font-family: var(--main-font-stack, sans-serif); }
   #aws-{{ sid }} .aws__corner { position: absolute; width: 1.1rem; height: 1.1rem; border: 0 solid #f3ece2; }
   #aws-{{ sid }} .aws__corner--tl { left: 0; top: 0; border-width: 2px 0 0 2px; }
   #aws-{{ sid }} .aws__corner--tr { right: 0; top: 0; border-width: 2px 2px 0 0; }
@@ -282,7 +278,7 @@
   #aws-{{ sid }} .aws__tc { position: absolute; right: 1.4rem; top: .35rem; margin: 0; font-size: .5rem; letter-spacing: .08em; }
   #aws-{{ sid }} .aws__focus { position: absolute; left: 50%; top: 36%; width: 14%; aspect-ratio: 1; border: 1.5px solid #dff04a; transform: translate(-50%, -50%); }
   #aws-{{ sid }} .aws__cross { position: absolute; left: 30%; right: 30%; top: 36%; height: 1px; background: rgba(243,236,226,.5); }
-  #aws-{{ sid }} .aws__flabel { position: absolute; left: 50%; top: 55%; margin: 0; padding: .15em .45em; background: #f59ad0; color: #111; font-family: 'Bebas Neue', sans-serif; font-size: clamp(1rem, 1.7vw, 1.8rem); line-height: 1.1; white-space: nowrap; transform: translateX(-50%) rotate(-3deg); }
+  #aws-{{ sid }} .aws__flabel { position: absolute; left: 50%; top: 55%; margin: 0; padding: .15em .45em; background: #f59ad0; color: #111; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.8rem, 1.3vw, 1.4rem); line-height: 1.1; white-space: nowrap; transform: translateX(-50%) rotate(-3deg); }
   #aws-{{ sid }} .aws__timeline { position: absolute; left: 0; right: 0; bottom: 0; height: 16%; display: flex; flex-wrap: wrap; align-content: space-between; gap: 6% 1.5%; padding-top: 3%; }
   #aws-{{ sid }} .aws__timeline span { height: 38%; width: var(--w); background: var(--c); border-radius: 2px; }
   #aws-{{ sid }} .aws__head-line { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: #ff3b30; animation: aws-play-{{ sid }} 6s linear infinite; animation-play-state: paused; }
@@ -295,8 +291,8 @@
     box-shadow: 0 .3rem .6rem rgba(0,0,0,.12); transform: rotate(var(--r)) scale(.6); opacity: 0;
     transition: transform .5s cubic-bezier(.3,1.6,.5,1) var(--d), opacity .25s ease var(--d);
   }
-  #aws-{{ sid }} .aws__note-card small { display: block; margin-bottom: .35rem; font: .4rem 'JetBrains Mono', monospace; letter-spacing: .06em; opacity: .7; }
-  #aws-{{ sid }} .aws__note-card span { display: block; font-family: 'Bebas Neue', sans-serif; font-size: clamp(.8rem, 1.25vw, 1.35rem); line-height: .95; text-transform: uppercase; }
+  #aws-{{ sid }} .aws__note-card small { display: block; margin-bottom: .35rem; font: .4rem var(--main-font-stack, sans-serif); letter-spacing: .06em; opacity: .7; }
+  #aws-{{ sid }} .aws__note-card span { display: block; font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.6rem, .95vw, 1.05rem); line-height: 1; text-transform: uppercase; }
   #aws-{{ sid }} .aws__note-card--1 { left: 7%; top: 9%; }
   #aws-{{ sid }} .aws__note-card--2 { left: 35%; top: 6%; }
   #aws-{{ sid }} .aws__note-card--3 { left: 9%; top: 48%; }
@@ -306,9 +302,9 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
     transform: scale(0) rotate(-20deg); transition: transform .55s cubic-bezier(.3,1.6,.5,1) 1.3s;
   }
-  #aws-{{ sid }} .aws__result small { font: .4rem 'JetBrains Mono', monospace; color: #dff04a; margin-bottom: .2rem; }
-  #aws-{{ sid }} .aws__result span { font-family: 'Bebas Neue', sans-serif; font-size: clamp(.8rem, 1.4vw, 1.5rem); line-height: .95; padding: 0 .6rem; }
-  #aws-{{ sid }} .aws__foot { position: absolute; left: 7%; bottom: 6%; margin: 0; padding: .3em .6em; background: #fff; font: .45rem 'JetBrains Mono', monospace; letter-spacing: .06em; opacity: 0; transition: opacity .4s ease 1.7s; }
+  #aws-{{ sid }} .aws__result small { font: .4rem var(--main-font-stack, sans-serif); color: #dff04a; margin-bottom: .2rem; }
+  #aws-{{ sid }} .aws__result span { font-family: var(--heading-font-stack, sans-serif); font-size: clamp(.6rem, 1.05vw, 1.15rem); line-height: 1; padding: 0 .6rem; }
+  #aws-{{ sid }} .aws__foot { position: absolute; left: 7%; bottom: 6%; margin: 0; padding: .3em .6em; background: #fff; font: .45rem var(--main-font-stack, sans-serif); letter-spacing: .06em; opacity: 0; transition: opacity .4s ease 1.7s; }
   #aws-{{ sid }} .is-in .aws__note-card { transform: rotate(var(--r)) scale(1); opacity: 1; }
   #aws-{{ sid }} .is-in .aws__result { transform: scale(1) rotate(0deg); }
   #aws-{{ sid }} .is-in .aws__foot { opacity: 1; }
