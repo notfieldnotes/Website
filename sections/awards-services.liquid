@@ -205,7 +205,11 @@
 
   /* ---------- 2. services ---------- */
   #aws-{{ sid }} .aws__make { position: relative; padding: 0 5vw 20vh; background: var(--aws-cream); }
-  #aws-{{ sid }} .aws__head { padding: 26vh 0 10vh; }
+  #aws-{{ sid }} .aws__head { padding: 8vh 0 8vh; }
+  /* the cream page slides up over the end of the globe scene, once the circle
+     has filled the screen, so there is no empty cream screen in between */
+  #aws-{{ sid }}[data-aws-live] .aws__make { margin-top: calc(var(--aws-pin) * -0.32 - 100vh * 0.25); z-index: 2;
+    background: linear-gradient(to bottom, transparent 30vh, var(--aws-cream) 30vh); }
   #aws-{{ sid }} .aws__title {
     position: relative; display: inline-block; margin: 0; color: var(--aws-ink);
     font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400);
@@ -223,9 +227,8 @@
   #aws-{{ sid }} .aws__row {
     position: sticky; top: 10vh;
     display: grid; grid-template-columns: 1fr; gap: 1.6rem;
-    padding: 3.2rem 0 3.6rem; background: var(--aws-cream);
+    padding: 2.6rem 0 3rem; background: var(--aws-cream);
     border-top: 1px solid color-mix(in srgb, var(--aws-ink) 45%, transparent);
-    min-height: 62vh;
   }
   #aws-{{ sid }} .aws__name { margin: 0 0 1.6rem; color: var(--aws-ink); font-family: var(--heading-font-stack, sans-serif); font-weight: var(--heading-font-weight, 400); font-size: clamp(1.8rem, 3.2vw, 3.4rem); line-height: .95; text-transform: uppercase; }
   #aws-{{ sid }} .aws__label { margin: 0 0 .9rem; font-family: var(--main-font-stack, sans-serif); font-weight: 700; font-size: .8rem; letter-spacing: .02em; }
@@ -495,10 +498,13 @@
           onUpdate: function (self) { extra = -self.progress * 1.6; }
         }
       });
-      tl.to(top, { opacity: 0, y: -40, duration: 0.3 }, 0.12);
-      tl.fromTo(world, { scale: 1, y: 0 }, { scale: 3.2, y: function () { return -window.innerHeight * 0.12; }, duration: 0.62, ease: 'power2.in' }, 0);
-      tl.to(world, { opacity: 0, duration: 0.12 }, 0.52);
-      tl.fromTo(iris, { clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(75% at 50% 50%)', duration: 0.42, ease: 'power2.in' }, 0.52);
+      /* the circle is full by 0.64; the cream page (pulled up by its negative
+         margin) starts to cover the scene just after, so there is no empty screen */
+      tl.to(top, { opacity: 0, y: -40, duration: 0.25 }, 0.1);
+      tl.fromTo(world, { scale: 1, y: 0 }, { scale: 3.2, y: function () { return -window.innerHeight * 0.12; }, duration: 0.44, ease: 'power2.in' }, 0);
+      tl.to(world, { opacity: 0, duration: 0.1 }, 0.36);
+      tl.fromTo(iris, { clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(75% at 50% 50%)', duration: 0.28, ease: 'power2.in' }, 0.36);
+      tl.set({}, {}, 1);
       made.push(tl);
 
       /* the service rows: each one pins near the top and the next slides up over
