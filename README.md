@@ -15,6 +15,7 @@ vendor code, and the per-page settings live in Shopify's own template JSON.
 
 | File | What it does |
 | --- | --- |
+| `sweet-run.liquid` | sweet-tape.com long pinned run: TO CREATE / TO FIX / TO PROTECT travel sideways while labels, taped photo cards, notes and arrows drift past; the track spaces the words so they never overlap, cards slap on with tape as they arrive, and the closing card rides in as the last screen |
 | `apple-navbar.liquid` | Skiper UI Apple navbar: slim frosted sticky bar; hovering a link grows one shared dropdown panel with staggered links while the page blurs; search opens in the same panel; phones get a two-line → X button and a full-screen menu with slide-in sub-pages |
 | `feature-block.liquid` | Apple "take a closer look" feature block: round + buttons beside a big image, each opening into a pill with the feature text and switching the image; on product pages uses each product's own photos |
 | `hover-expansion.liquid` | Skiper UI hover expansion: a row of image panels where the hovered one widens and shows its title and link; stacks with tap-to-open on phones; blocks or a collection's products |

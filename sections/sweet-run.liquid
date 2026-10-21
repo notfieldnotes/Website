@@ -1,0 +1,1148 @@
+{% doc %}
+  Sweet run - the long pinned stretch from sweet-tape.com.
+
+  Measured on their page: the section is 8808px tall, it opens with a
+  headline at 90px and then three words at 549.994px in #013900 - TO CREATE,
+  TO FIX, TO PROTECT - that travel sideways while the page is scrolled down.
+  Around them, labels, taped photo cards, drawn arrows, handwritten notes and
+  numbered markers drift past at their own speeds.
+
+  The stage pins for as long as the section is tall, and everything inside
+  rides one horizontal track. A block's depth is how much further than the
+  track it travels, which is what sets the near things apart from the far.
+
+  The track is made at least wide enough that no giant word runs into the
+  next, whatever the screen: on a phone the words are far wider than the
+  screen, so the track grows to fit them rather than letting them pile up.
+  The closing card rides in on the end of the track and fills the last
+  screen, and photo cards and labels are slapped on, tape last, as they
+  come into view.
+{% enddoc %}
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id | replace: '_', '-'
+  assign items = section.blocks
+-%}
+
+{%- if s.google_font != blank -%}
+  {%- assign font_q = s.google_font | replace: ' ', '+' -%}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ font_q }}:wght@400;700;800;900&display=swap">
+{%- endif -%}
+{%- if s.note_font_google != blank -%}
+  {%- assign note_q = s.note_font_google | replace: ' ', '+' -%}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ note_q }}&display=swap">
+{%- endif -%}
+
+{%- capture tape -%}
+  {%- if s.tape != blank -%}
+    <img class="swrn__tape" src="{{ s.tape | image_url: width: 360 }}" alt="" loading="lazy">
+  {%- else -%}
+    <span class="swrn__tape swrn__tape--drawn" aria-hidden="true"></span>
+  {%- endif -%}
+{%- endcapture -%}
+
+<section class="swrn" id="swrn-{{ sid }}" data-sweet-run
+  data-travel="{{ s.track_width }}"
+  data-glide="{{ s.glide }}"
+  style="
+    --rn-bg: {{ s.bg_color }};
+    --rn-ink: {{ s.ink_color }};
+    --rn-font: {{ s.font_stack }};
+    --rn-stage: {{ s.stage_height }}svh;
+    --rn-run: {{ s.scroll_length }};
+  ">
+
+  <div class="swrn__pin" data-sweet-run-pin>
+    {%- if s.texture != blank -%}
+      <div class="swrn__grain" aria-hidden="true"
+        style="background-image:url({{ s.texture | image_url: width: 1600 }}); opacity:{{ s.texture_opacity | divided_by: 100.0 }};"></div>
+    {%- endif -%}
+
+    {%- if s.intro != blank -%}
+      <h2 class="swrn__intro" data-sweet-run-intro>{{ s.intro }}</h2>
+    {%- endif -%}
+
+    {%- comment -%}
+      One track carries everything. It is wider than the screen, and the
+      scroll slides it along; each thing on it adds its own depth on top.
+    {%- endcomment -%}
+    <div class="swrn__track" data-sweet-run-track style="width: {{ s.track_width }}vw;">
+      {%- for b in items -%}
+        {%- assign it = b.settings -%}
+        {%- capture place -%}left: {{ it.x }}%; top: {{ it.y }}%;{%- endcapture -%}
+
+        {%- case b.type -%}
+
+          {%- when 'word' -%}
+            <h3 class="swrn__word" data-sweet-run-item data-sweet-run-word data-x="{{ it.x }}" data-depth="{{ it.depth }}"
+              style="{{ place }} --size: {{ it.size }}; --tilt: {{ it.tilt }}deg; color: {{ it.color | default: s.ink_color }};"
+              {{ b.shopify_attributes }}>
+              {%- if it.line_one != blank -%}<span>{{ it.line_one }}</span>{%- endif -%}
+              {%- if it.line_two != blank -%}<span>{{ it.line_two }}</span>{%- endif -%}
+            </h3>
+
+          {%- when 'disc' -%}
+            <div class="swrn__disc" data-sweet-run-item data-stick data-depth="{{ it.depth }}"
+              style="{{ place }} width: {{ it.size }}px; --tilt: {{ it.tilt }}deg; z-index: {{ it.layer }};"
+              {{ b.shopify_attributes }}>
+              <div class="swrn__slap">
+                {%- if it.image != blank -%}
+                  {{ it.image | image_url: width: 900 | image_tag: loading: 'lazy', widths: '240, 480, 900', sizes: '28vw', alt: it.alt }}
+                {%- elsif it.product != blank -%}
+                  {%- assign d_alt = it.product.title | escape -%}
+                  <img src="{{ it.product.featured_image | image_url: width: 900 }}" alt="{{ d_alt }}" loading="lazy">
+                {%- endif -%}
+                {%- if it.caption != blank -%}<span class="swrn__disc-cap">{{ it.caption }}</span>{%- endif -%}
+              </div>
+            </div>
+
+          {%- when 'card' -%}
+            {%- liquid
+              assign shot = it.image
+              if shot == blank and it.product != blank
+                assign shot = it.product.featured_image
+              endif
+            -%}
+            <figure class="swrn__card" data-sweet-run-item data-stick data-depth="{{ it.depth }}"
+              style="{{ place }} width: {{ it.size }}px; --tilt: {{ it.tilt }}deg; z-index: {{ it.layer }}; --backing: {{ it.backing }};"
+              {{ b.shopify_attributes }}>
+              <div class="swrn__slap">
+                <div class="swrn__photo">
+                  {%- if shot != blank -%}
+                    {{ shot | image_url: width: 900 | image_tag: loading: 'lazy', widths: '240, 480, 900', sizes: '(max-width: 989px) 60vw, 28vw', alt: it.alt }}
+                  {%- endif -%}
+                </div>
+              </div>
+              {{ tape }}
+            </figure>
+
+          {%- when 'note' -%}
+            <div class="swrn__note" data-sweet-run-item data-depth="{{ it.depth }}"
+              style="{{ place }} width: {{ it.size }}px; --tilt: {{ it.tilt }}deg; color: {{ it.color }};"
+              {{ b.shopify_attributes }}>
+              {%- if it.mark -%}
+                <svg class="swrn__mark" viewBox="0 0 90 60" aria-hidden="true">
+                  <path d="M6,6 L6,54" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                  <path d="M2,18 L58,12" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
+              {%- endif -%}
+              <p>{{ it.text }}</p>
+            </div>
+
+          {%- when 'arrow' -%}
+            <div class="swrn__arrow" data-sweet-run-item data-depth="{{ it.depth }}"
+              style="{{ place }} width: {{ it.size }}px; --tilt: {{ it.tilt }}deg; color: {{ it.color }};"
+              {{ b.shopify_attributes }}>
+              {%- comment -%} a drawn sweep with a head, as on the reference {%- endcomment -%}
+              <svg viewBox="0 0 300 160" fill="none" aria-hidden="true"
+                style="transform: scaleX({% if it.flip %}-1{% else %}1{% endif %});">
+                <path d="M6,14 C90,10 215,46 272,132" stroke="currentColor" stroke-width="{{ it.weight }}" stroke-linecap="round"/>
+                <path d="M248,104 L274,136 L236,142" stroke="currentColor" stroke-width="{{ it.weight }}" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+
+          {%- when 'marker' -%}
+            <div class="swrn__marker" data-sweet-run-item data-depth="{{ it.depth }}"
+              style="{{ place }} --size: {{ it.size }}px; --tilt: {{ it.tilt }}deg; color: {{ it.color }};"
+              {{ b.shopify_attributes }}>
+              <span>{{ it.label }}</span>
+            </div>
+
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+
+    {%- if s.show_end -%}
+      {%- comment -%}
+        The closing card. It rides in on the end of the track and fills the
+        last screen, rather than being a section of its own, which is how the
+        reference lands it.
+      {%- endcomment -%}
+      <div class="swrn__end" data-sweet-run-end>
+        {%- if s.end_image != blank -%}
+          <figure class="swrn__end-shot" data-stick>
+            <div class="swrn__slap">
+              <div class="swrn__photo">
+                {{ s.end_image | image_url: width: 1200 | image_tag: loading: 'lazy', widths: '400, 800, 1200', sizes: '(max-width: 989px) 80vw, 40vw', alt: '' }}
+              </div>
+            </div>
+            {{ tape }}
+          </figure>
+        {%- endif -%}
+        <div class="swrn__end-card">
+          {%- if s.end_heading != blank -%}<h3>{{ s.end_heading }}</h3>{%- endif -%}
+          {%- if s.end_sub != blank -%}<p>{{ s.end_sub }}</p>{%- endif -%}
+          {%- if s.end_cta != blank -%}
+            <a href="{{ s.end_link | default: '/collections/all' }}">{{ s.end_cta }}</a>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% style %}
+  /* a theme ancestor with overflow:hidden would kill the sticky pin */
+  main:has(#swrn-{{ sid }}),
+  #MainContent:has(#swrn-{{ sid }}) {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  #swrn-{{ sid }} {
+    position: relative;
+    background: var(--rn-bg);
+    font-family: var(--rn-font);
+    color: var(--rn-ink);
+    height: calc(var(--rn-stage) * var(--rn-run));
+  }
+  #swrn-{{ sid }} * { box-sizing: border-box; }
+  #swrn-{{ sid }} img { display: block; width: 100%; height: auto; }
+
+  #swrn-{{ sid }} .swrn__pin {
+    position: sticky; top: 0;
+    height: var(--rn-stage);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  #swrn-{{ sid }} .swrn__grain {
+    position: absolute; inset: 0; z-index: 8;
+    background-size: cover; mix-blend-mode: multiply; pointer-events: none;
+  }
+
+  #swrn-{{ sid }} .swrn__intro {
+    position: absolute;
+    left: {{ s.intro_x }}%; top: {{ s.intro_y }}%;
+    z-index: 6;
+    margin: 0;
+    max-width: {{ s.intro_measure }}ch;
+    font-size: {{ s.intro_size }}px;
+    font-weight: 800;
+    line-height: .92;
+    letter-spacing: -.03em;
+    text-transform: uppercase;
+    /* it gives way as the run gets going, so the words have the stage */
+    opacity: var(--intro, 1);
+    transform: translate3d(calc((1 - var(--intro, 1)) * -12vw), 0, 0);
+  }
+
+  /* ---- the track everything rides ---- */
+  #swrn-{{ sid }} .swrn__track {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    z-index: 3;
+    transform: translate3d(var(--slide, 0px), 0, 0);
+    will-change: transform;
+  }
+  #swrn-{{ sid }} [data-sweet-run-item] {
+    position: absolute;
+    transform: translate3d(var(--drift, 0px), -50%, 0) rotate(var(--tilt, 0deg));
+    will-change: transform;
+  }
+
+  /* ---- the giant words ---- */
+  #swrn-{{ sid }} .swrn__word {
+    margin: 0;
+    display: flex; flex-direction: column;
+    font-size: calc(var(--size) * 1px);
+    font-weight: 800;
+    line-height: .78;
+    letter-spacing: -.005em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ---- labels and taped photo cards ---- */
+  #swrn-{{ sid }} .swrn__disc { filter: drop-shadow(0 22px 38px rgba(0,0,0,.28)); }
+  #swrn-{{ sid }} .swrn__disc-cap {
+    display: block; margin-top: 8px; text-align: center;
+    font-size: {{ s.caption_size }}px; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+
+  #swrn-{{ sid }} .swrn__card,
+  #swrn-{{ sid }} .swrn__end-shot {
+    margin: 0;
+    /* the darker block under the photo on the reference: a hard, offset
+       shadow rather than a soft one, as if the card had some thickness */
+    filter: drop-shadow({{ s.card_shadow_x }}px {{ s.card_shadow_y }}px 0 color-mix(in srgb, var(--rn-ink) {{ s.card_shadow_strength }}%, transparent));
+  }
+  #swrn-{{ sid }} .swrn__photo {
+    position: relative;
+    padding: {{ s.card_pad }}px;
+    border-radius: {{ s.card_radius }}px;
+    background: var(--backing, {{ s.end_shot_backing }});
+    overflow: hidden;
+  }
+  #swrn-{{ sid }} .swrn__photo img {
+    width: 100%;
+    aspect-ratio: 100 / {{ s.card_ratio }};
+    height: auto;
+    object-fit: cover;
+    border-radius: {{ s.card_radius | minus: s.card_pad | at_least: 0 }}px;
+  }
+  #swrn-{{ sid }} .swrn__photo:empty { aspect-ratio: 100 / {{ s.card_ratio }}; }
+
+  /* the strip of tape across the top edge, overhanging it */
+  #swrn-{{ sid }} .swrn__tape {
+    position: absolute;
+    left: {{ s.tape_x }}%; top: 0;
+    width: {{ s.tape_width }}%;
+    z-index: 2;
+    border-radius: 0 !important;
+    transform: translateY(-38%) rotate({{ s.tape_tilt }}deg);
+    transform-origin: 0 50%;
+  }
+  #swrn-{{ sid }} .swrn__tape--drawn {
+    display: block;
+    aspect-ratio: 100 / 22;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 40%, rgba(0,0,0,.06)),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 2px, transparent 2px 9px),
+      {{ s.tape_color }};
+    opacity: {{ s.tape_opacity | divided_by: 100.0 }};
+    /* torn ends */
+    clip-path: polygon(0 4%, 2% 0, 98% 3%, 100% 0, 99% 22%, 100% 45%, 98.5% 70%, 100% 100%, 2% 96%, 0 100%, 1.5% 74%, 0 50%, 1.2% 26%);
+    box-shadow: 0 2px 4px rgba(0,0,0,.12);
+  }
+
+  /* ---- slapped on as it comes into view ---- */
+  #swrn-{{ sid }} [data-stick] .swrn__slap {
+    transform: scale(1.22) rotate(7deg);
+    opacity: 0;
+    transition: transform .2s ease-in, opacity .15s linear;
+  }
+  #swrn-{{ sid }} [data-stick].is-stuck .swrn__slap {
+    transform: none;
+    opacity: 1;
+    transition: transform .55s cubic-bezier(.25, 1.55, .45, 1), opacity .12s linear;
+  }
+  #swrn-{{ sid }} [data-stick] .swrn__tape {
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path .15s linear;
+  }
+  #swrn-{{ sid }} [data-stick] .swrn__tape--drawn {
+    clip-path: polygon(0 4%, 0 0, 0 3%, 0 0, 0 22%, 0 45%, 0 70%, 0 100%, 0 96%, 0 100%, 0 74%, 0 50%, 0 26%);
+  }
+  #swrn-{{ sid }} [data-stick].is-stuck .swrn__tape {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path .32s cubic-bezier(.3, .7, .3, 1) .38s;
+  }
+  #swrn-{{ sid }} [data-stick].is-stuck .swrn__tape--drawn {
+    clip-path: polygon(0 4%, 2% 0, 98% 3%, 100% 0, 99% 22%, 100% 45%, 98.5% 70%, 100% 100%, 2% 96%, 0 100%, 1.5% 74%, 0 50%, 1.2% 26%);
+  }
+
+  #swrn-{{ sid }} .swrn__note {
+    font-family: {{ s.note_font }};
+    font-size: {{ s.note_size }}px;
+    line-height: 1.3;
+  }
+  #swrn-{{ sid }} .swrn__note p { margin: 0; }
+  #swrn-{{ sid }} .swrn__mark {
+    position: absolute; left: -{{ s.note_size | times: 2 }}px; top: -{{ s.note_size }}px;
+    width: {{ s.note_size | times: 3 }}px; height: auto;
+  }
+
+  #swrn-{{ sid }} .swrn__arrow svg { width: 100%; height: auto; display: block; }
+
+  #swrn-{{ sid }} .swrn__marker {
+    width: var(--size); height: var(--size);
+    display: grid; place-items: center;
+    border: 2px solid currentColor; border-radius: 50%;
+    font-family: {{ s.note_font }};
+    font-size: calc(var(--size) * .5);
+  }
+
+  /* ---- the closing card, riding in on the end of the track ---- */
+  #swrn-{{ sid }} .swrn__end {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 7;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: {{ s.end_gap }}px;
+    padding: {{ s.end_pad }}px;
+    transform: translate3d(var(--end-x, 100vw), 0, 0);
+    will-change: transform;
+  }
+  #swrn-{{ sid }} .swrn__end-shot { position: relative; --backing: {{ s.end_shot_backing }}; }
+  #swrn-{{ sid }} .swrn__end-shot .swrn__photo { border-radius: {{ s.end_radius }}px; }
+  #swrn-{{ sid }} .swrn__end-card {
+    background: {{ s.end_color }};
+    color: {{ s.end_ink }};
+    border-radius: {{ s.end_radius }}px;
+    padding: {{ s.end_pad }}px;
+    text-align: center;
+  }
+  #swrn-{{ sid }} .swrn__end-card h3 {
+    margin: 0;
+    font-size: {{ s.end_size }}px;
+    font-weight: 800;
+    line-height: .92;
+    letter-spacing: -.02em;
+    text-transform: uppercase;
+  }
+  #swrn-{{ sid }} .swrn__end-card p {
+    margin: {{ s.end_pad | divided_by: 2 }}px 0 0;
+    font-family: {{ s.body_font }};
+    font-size: {{ s.end_sub_size }}px;
+    font-weight: 700;
+  }
+  #swrn-{{ sid }} .swrn__end-card a {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-top: {{ s.end_pad | divided_by: 2 }}px;
+    height: {{ s.end_cta_height }}px;
+    padding: 0 {{ s.end_cta_height | divided_by: 2 }}px;
+    border-radius: 999px;
+    background: {{ s.end_ink }};
+    color: {{ s.end_color }};
+    font-size: {{ s.caption_size }}px; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase; text-decoration: none;
+  }
+
+  @media (max-width: 989px) {
+    #swrn-{{ sid }} .swrn__intro { font-size: {{ s.intro_size | times: 5 | divided_by: 10 }}px; max-width: none; right: {{ s.intro_x }}%; }
+    #swrn-{{ sid }} .swrn__word { font-size: calc(var(--size) * {{ s.word_scale_mobile }} / 100 * 1px); }
+    #swrn-{{ sid }} .swrn__card { width: calc(var(--w, 300px) * {{ s.card_scale_mobile }} / 100) !important; }
+    #swrn-{{ sid }} .swrn__disc { width: calc(var(--w, 300px) * {{ s.card_scale_mobile }} / 100) !important; }
+    #swrn-{{ sid }} .swrn__end {
+      grid-template-columns: 1fr;
+      align-content: center;
+      gap: {{ s.end_gap | divided_by: 2 }}px;
+      padding: {{ s.end_pad | divided_by: 2 }}px;
+    }
+    #swrn-{{ sid }} .swrn__end-shot { width: 70%; justify-self: center; }
+    #swrn-{{ sid }} .swrn__end-card { padding: {{ s.end_pad | divided_by: 2 }}px {{ s.end_pad | divided_by: 3 }}px; }
+    #swrn-{{ sid }} .swrn__end-card h3 { font-size: {{ s.end_size | times: 5 | divided_by: 10 }}px; }
+    {%- unless s.shots_on_mobile %}
+    #swrn-{{ sid }} .swrn__end-shot { display: none; }
+    {%- endunless %}
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #swrn-{{ sid }} [data-stick] .swrn__slap,
+    #swrn-{{ sid }} [data-stick] .swrn__tape { transition: none !important; transform: none; opacity: 1; clip-path: none !important; }
+  }
+{% endstyle %}
+
+<script>
+  (function () {
+    var root = document.getElementById('swrn-{{ sid }}');
+    if (!root) return;
+    var pin = root.querySelector('[data-sweet-run-pin]');
+    var track = root.querySelector('[data-sweet-run-track]');
+    if (!pin || !track) return;
+
+    var items = [].slice.call(root.querySelectorAll('[data-sweet-run-item]'));
+    var words = [].slice.call(root.querySelectorAll('[data-sweet-run-word]'));
+    var sticks = [].slice.call(root.querySelectorAll('[data-stick]'));
+    var intro = root.querySelector('[data-sweet-run-intro]');
+    var end = root.querySelector('[data-sweet-run-end]');
+
+    var TRAVEL = parseFloat(root.dataset.travel) || 300;   /* least track width, in vw */
+    var GLIDE = (parseFloat(root.dataset.glide) || 18) / 100;
+    if (window.lenis) GLIDE = Math.min(1, GLIDE * 2.4);
+    var DEPTH = {{ s.depth_span }};
+    var INTRO_OUT = {{ s.intro_out | divided_by: 100.0 }};
+    var WORD_GAP = {{ s.word_gap }} / 100;                 /* share of the screen between words */
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* cards and labels keep their set width for the phone scale-down */
+    sticks.concat([].slice.call(root.querySelectorAll('.swrn__disc'))).forEach(function (el) {
+      if (el.style.width) el.style.setProperty('--w', el.style.width);
+    });
+
+    var at = 0, W = 0, END = 0, vw = 0;
+
+    /* The track has to be wide enough that, at each word's place on it, the
+       word ends before the next one starts. Positions are shares of the
+       track, so widening it spreads the words without moving them in order. */
+    function measure() {
+      vw = window.innerWidth;
+      var need = TRAVEL / 100 * vw;
+      var list = words.map(function (w) {
+        return { x: (parseFloat(w.dataset.x) || 0) / 100, w: w.offsetWidth };
+      }).sort(function (a, b) { return a.x - b.x; });
+      for (var i = 0; i < list.length; i++) {
+        var next = i + 1 < list.length ? list[i + 1].x : 1;
+        var room = next - list[i].x;
+        if (room > 0) need = Math.max(need, (list[i].w + WORD_GAP * vw) / room);
+      }
+      W = Math.ceil(need);
+      track.style.width = W + 'px';
+      /* the last word may run past the end of the track; the run carries on
+         until it has cleared the screen, plus the gap */
+      END = W;
+      for (var j = 0; j < list.length; j++) {
+        END = Math.max(END, list[j].x * W + list[j].w + WORD_GAP * vw);
+      }
+    }
+
+    function progress() {
+      var r = root.getBoundingClientRect();
+      var span = r.height - pin.offsetHeight;
+      if (span <= 0) return 0;
+      return Math.max(0, Math.min(1, -r.top / span));
+    }
+
+    function frame() {
+      var want = progress();
+      at += (want - at) * (calm ? 1 : GLIDE);
+
+      /* With a closing card the track slides all the way off and the card,
+         riding on its end, fills the last screen. Without one, the far edge
+         of the track lands on the right of the screen as the section ends. */
+      var run = end ? END : Math.max(0, END - vw);
+      var slide = -at * run;
+      track.style.setProperty('--slide', slide.toFixed(1) + 'px');
+      if (end) end.style.setProperty('--end-x', Math.max(0, END + slide).toFixed(1) + 'px');
+
+      /* each thing adds its own depth on top of the track's own travel */
+      for (var i = 0; i < items.length; i++) {
+        var d = parseFloat(items[i].dataset.depth) || 0;
+        items[i].style.setProperty('--drift', (at * d * DEPTH / 100).toFixed(1) + 'px');
+      }
+
+      /* slap each card on once it is well onto the screen, and peel it off
+         again if the page is scrolled back past it */
+      for (var k = 0; k < sticks.length; k++) {
+        var r = sticks[k].getBoundingClientRect();
+        var on = r.left < vw * {{ s.stick_at | divided_by: 100.0 }} && r.right > 0;
+        if (on !== sticks[k].classList.contains('is-stuck')) sticks[k].classList.toggle('is-stuck', on);
+      }
+
+      if (intro) intro.style.setProperty('--intro', Math.max(0, 1 - at / INTRO_OUT).toFixed(3));
+
+      requestAnimationFrame(frame);
+    }
+
+    measure();
+    window.addEventListener('resize', measure);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+    window.addEventListener('load', measure);
+    requestAnimationFrame(frame);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Sweet run",
+  "tag": "section",
+  "class": "section-sweet-run",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "The long pinned stretch from sweet-tape.com: the stage holds while giant words travel sideways and labels, cards, arrows and notes drift past at their own speeds. Add a block for each thing on the run and give it a place on the track."
+    },
+    {
+      "type": "header",
+      "content": "The field"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#b6fe00"
+    },
+    {
+      "type": "color",
+      "id": "ink_color",
+      "label": "Ink",
+      "default": "#013900"
+    },
+    {
+      "type": "image_picker",
+      "id": "texture",
+      "label": "Paper texture"
+    },
+    {
+      "type": "range",
+      "id": "texture_opacity",
+      "label": "Texture strength",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 35
+    },
+    {
+      "type": "header",
+      "content": "How long it runs"
+    },
+    {
+      "type": "range",
+      "id": "stage_height",
+      "label": "Stage height",
+      "min": 60,
+      "max": 100,
+      "step": 5,
+      "unit": "vh",
+      "default": 100
+    },
+    {
+      "type": "range",
+      "id": "scroll_length",
+      "label": "How long it holds",
+      "min": 2,
+      "max": 12,
+      "step": 1,
+      "unit": "x",
+      "default": 8,
+      "info": "Multiples of the stage height. The reference holds for about nine screens."
+    },
+    {
+      "type": "range",
+      "id": "track_width",
+      "label": "How wide the track is",
+      "min": 120,
+      "max": 800,
+      "step": 20,
+      "unit": "vw",
+      "default": 420,
+      "info": "Everything is placed as a share of this. It grows by itself when the giant words would otherwise run into each other, as they do on phones."
+    },
+    {
+      "type": "range",
+      "id": "word_gap",
+      "label": "Least gap between giant words",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 30,
+      "info": "Of the screen width."
+    },
+    {
+      "type": "range",
+      "id": "glide",
+      "label": "How softly it follows the scroll",
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "depth_span",
+      "label": "How much depth separates things",
+      "min": 0,
+      "max": 600,
+      "step": 20,
+      "unit": "px",
+      "default": 260
+    },
+    {
+      "type": "header",
+      "content": "The opening line"
+    },
+    {
+      "type": "text",
+      "id": "intro",
+      "label": "Headline",
+      "default": "WE'RE HERE FOR THE EVERYDAY MOMENTS."
+    },
+    {
+      "type": "range",
+      "id": "intro_size",
+      "label": "Headline size",
+      "min": 24,
+      "max": 160,
+      "step": 2,
+      "unit": "px",
+      "default": 90,
+      "info": "The reference runs at 90px."
+    },
+    {
+      "type": "range",
+      "id": "intro_x",
+      "label": "From the left",
+      "min": 0,
+      "max": 80,
+      "step": 1,
+      "unit": "%",
+      "default": 6
+    },
+    {
+      "type": "range",
+      "id": "intro_y",
+      "label": "From the top",
+      "min": 0,
+      "max": 80,
+      "step": 1,
+      "unit": "%",
+      "default": 10
+    },
+    {
+      "type": "range",
+      "id": "intro_measure",
+      "label": "Headline width",
+      "min": 8,
+      "max": 40,
+      "step": 1,
+      "unit": "ch",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "intro_out",
+      "label": "Fades out over",
+      "min": 5,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 25,
+      "info": "Of the run."
+    },
+    {
+      "type": "header",
+      "content": "Photo cards"
+    },
+    {
+      "type": "range",
+      "id": "card_ratio",
+      "label": "Card height",
+      "min": 60,
+      "max": 160,
+      "step": 5,
+      "unit": "%",
+      "default": 100,
+      "info": "Of its width. Photos are cropped to fit."
+    },
+    {
+      "type": "range",
+      "id": "card_pad",
+      "label": "Card border",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Card corners",
+      "min": 0,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 56
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_x",
+      "label": "Card shadow across",
+      "min": -30,
+      "max": 30,
+      "step": 1,
+      "unit": "px",
+      "default": -8
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_y",
+      "label": "Card shadow down",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_strength",
+      "label": "Card shadow strength",
+      "min": 0,
+      "max": 60,
+      "step": 2,
+      "unit": "%",
+      "default": 22
+    },
+    {
+      "type": "range",
+      "id": "card_scale_mobile",
+      "label": "Card and label size on phones",
+      "min": 40,
+      "max": 120,
+      "step": 5,
+      "unit": "%",
+      "default": 70
+    },
+    {
+      "type": "range",
+      "id": "stick_at",
+      "label": "Slapped on once this far onto the screen",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 85,
+      "info": "Counted from the left. Cards and labels pop on, tape last, as they reach it."
+    },
+    {
+      "type": "header",
+      "content": "Tape"
+    },
+    {
+      "type": "image_picker",
+      "id": "tape",
+      "label": "Tape strip picture",
+      "info": "Optional. Without one a kraft tape strip is drawn."
+    },
+    {
+      "type": "color",
+      "id": "tape_color",
+      "label": "Drawn tape colour",
+      "default": "#d9bf94"
+    },
+    {
+      "type": "range",
+      "id": "tape_opacity",
+      "label": "Drawn tape strength",
+      "min": 40,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 90
+    },
+    {
+      "type": "range",
+      "id": "tape_width",
+      "label": "Tape length",
+      "min": 20,
+      "max": 100,
+      "step": 2,
+      "unit": "%",
+      "default": 66
+    },
+    {
+      "type": "range",
+      "id": "tape_x",
+      "label": "Tape from the left",
+      "min": -20,
+      "max": 80,
+      "step": 2,
+      "unit": "%",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "tape_tilt",
+      "label": "Tape tilt",
+      "min": -15,
+      "max": 15,
+      "step": 1,
+      "unit": "deg",
+      "default": 2
+    },
+    {
+      "type": "header",
+      "content": "Notes"
+    },
+    {
+      "type": "text",
+      "id": "note_font_google",
+      "label": "Note font to fetch",
+      "default": "Caveat"
+    },
+    {
+      "type": "text",
+      "id": "note_font",
+      "label": "Note font stack",
+      "default": "'Caveat', 'Bradley Hand', cursive"
+    },
+    {
+      "type": "range",
+      "id": "note_size",
+      "label": "Note size",
+      "min": 12,
+      "max": 48,
+      "step": 1,
+      "unit": "px",
+      "default": 22
+    },
+    {
+      "type": "range",
+      "id": "caption_size",
+      "label": "Caption size",
+      "min": 8,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "word_scale_mobile",
+      "label": "Word size on phones",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 45
+    },
+    {
+      "type": "header",
+      "content": "The closing card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_end",
+      "label": "Show it",
+      "default": true,
+      "info": "It rides in on the end of the run and fills the last screen."
+    },
+    {
+      "type": "range",
+      "id": "end_in",
+      "label": "Arrives at (no longer used)",
+      "min": 40,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 85
+    },
+    {
+      "type": "text",
+      "id": "end_heading",
+      "label": "Heading",
+      "default": "LET'S MAKE IT STICK!"
+    },
+    {
+      "type": "text",
+      "id": "end_sub",
+      "label": "Line under it",
+      "default": "For everything that matters."
+    },
+    {
+      "type": "text",
+      "id": "end_cta",
+      "label": "Button",
+      "default": "SHOP THE RANGE"
+    },
+    {
+      "type": "url",
+      "id": "end_link",
+      "label": "Button link"
+    },
+    {
+      "type": "image_picker",
+      "id": "end_image",
+      "label": "Picture beside it",
+      "info": "Taped on like the photo cards."
+    },
+    {
+      "type": "color",
+      "id": "end_shot_backing",
+      "label": "Behind the picture",
+      "default": "#c9a8ff"
+    },
+    {
+      "type": "color",
+      "id": "end_color",
+      "label": "Card",
+      "default": "#013900"
+    },
+    {
+      "type": "color",
+      "id": "end_ink",
+      "label": "Card text",
+      "default": "#b6fe00"
+    },
+    {
+      "type": "range",
+      "id": "end_size",
+      "label": "Heading size",
+      "min": 28,
+      "max": 160,
+      "step": 2,
+      "unit": "px",
+      "default": 92
+    },
+    {
+      "type": "range",
+      "id": "end_sub_size",
+      "label": "Line size",
+      "min": 11,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "end_radius",
+      "label": "Corners",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "end_pad",
+      "label": "Padding",
+      "min": 16,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "end_gap",
+      "label": "Gap between the two",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "end_cta_height",
+      "label": "Button height",
+      "min": 36,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 52
+    },
+    {
+      "type": "checkbox",
+      "id": "shots_on_mobile",
+      "label": "Keep the picture on phones",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Type"
+    },
+    {
+      "type": "text",
+      "id": "google_font",
+      "label": "Font to fetch",
+      "default": "Anton"
+    },
+    {
+      "type": "text",
+      "id": "font_stack",
+      "label": "Font stack",
+      "default": "'Anton', 'Oswald', Impact, sans-serif"
+    },
+    {
+      "type": "text",
+      "id": "body_font",
+      "label": "Body font",
+      "default": "'Inter Tight', Inter, system-ui, sans-serif"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "word",
+      "name": "Giant word",
+      "settings": [
+        { "type": "text", "id": "line_one", "label": "First line", "default": "TO" },
+        { "type": "text", "id": "line_two", "label": "Second line", "default": "CREATE" },
+        { "type": "range", "id": "size", "label": "Size", "min": 80, "max": 600, "step": 10, "unit": "px", "default": 550, "info": "The reference runs at 550px." },
+        { "type": "color", "id": "color", "label": "Colour", "default": "#013900" },
+        { "type": "range", "id": "x", "label": "Across the track", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 20 },
+        { "type": "range", "id": "y", "label": "Down the screen", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "depth", "label": "Depth", "min": -100, "max": 100, "step": 5, "default": 0, "info": "How much further than the track it travels." },
+        { "type": "range", "id": "tilt", "label": "Tilt", "min": -45, "max": 45, "step": 1, "unit": "deg", "default": 0 }
+      ]
+    },
+    {
+      "type": "disc",
+      "name": "Product label",
+      "settings": [
+        { "type": "product", "id": "product", "label": "Product" },
+        { "type": "image_picker", "id": "image", "label": "Picture" },
+        { "type": "text", "id": "alt", "label": "Description for screen readers", "default": "Product" },
+        { "type": "text", "id": "caption", "label": "Caption under it", "default": "NOTEBOOK" },
+        { "type": "range", "id": "size", "label": "Size", "min": 60, "max": 600, "step": 10, "unit": "px", "default": 300 },
+        { "type": "range", "id": "layer", "label": "Layer", "min": 1, "max": 20, "step": 1, "default": 5 },
+        { "type": "range", "id": "x", "label": "Across the track", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 20 },
+        { "type": "range", "id": "y", "label": "Down the screen", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "depth", "label": "Depth", "min": -100, "max": 100, "step": 5, "default": 0, "info": "How much further than the track it travels." },
+        { "type": "range", "id": "tilt", "label": "Tilt", "min": -45, "max": 45, "step": 1, "unit": "deg", "default": 0 }
+      ]
+    },
+    {
+      "type": "card",
+      "name": "Photo card",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Photo" },
+        { "type": "product", "id": "product", "label": "Or a product's photo", "info": "Used when no photo is chosen." },
+        { "type": "text", "id": "alt", "label": "Description for screen readers", "default": "Photo" },
+        { "type": "color", "id": "backing", "label": "Backing", "default": "#c9a8ff" },
+        { "type": "range", "id": "size", "label": "Size", "min": 80, "max": 700, "step": 10, "unit": "px", "default": 340 },
+        { "type": "range", "id": "layer", "label": "Layer", "min": 1, "max": 20, "step": 1, "default": 4 },
+        { "type": "range", "id": "x", "label": "Across the track", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 20 },
+        { "type": "range", "id": "y", "label": "Down the screen", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "depth", "label": "Depth", "min": -100, "max": 100, "step": 5, "default": 0, "info": "How much further than the track it travels." },
+        { "type": "range", "id": "tilt", "label": "Tilt", "min": -45, "max": 45, "step": 1, "unit": "deg", "default": 0 }
+      ]
+    },
+    {
+      "type": "note",
+      "name": "Handwritten note",
+      "settings": [
+        { "type": "textarea", "id": "text", "label": "Note", "default": "the quick fix that outlasts the thing it fixed." },
+        { "type": "color", "id": "color", "label": "Colour", "default": "#013900" },
+        { "type": "range", "id": "size", "label": "Width", "min": 80, "max": 480, "step": 10, "unit": "px", "default": 220 },
+        { "type": "checkbox", "id": "mark", "label": "Show the drawn mark", "default": true },
+        { "type": "range", "id": "x", "label": "Across the track", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 20 },
+        { "type": "range", "id": "y", "label": "Down the screen", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "depth", "label": "Depth", "min": -100, "max": 100, "step": 5, "default": 0, "info": "How much further than the track it travels." },
+        { "type": "range", "id": "tilt", "label": "Tilt", "min": -45, "max": 45, "step": 1, "unit": "deg", "default": 0 }
+      ]
+    },
+    {
+      "type": "arrow",
+      "name": "Drawn arrow",
+      "settings": [
+        { "type": "color", "id": "color", "label": "Colour", "default": "#013900" },
+        { "type": "range", "id": "size", "label": "Size", "min": 60, "max": 700, "step": 10, "unit": "px", "default": 280 },
+        { "type": "range", "id": "weight", "label": "Line weight", "min": 1, "max": 10, "step": 1, "unit": "px", "default": 3 },
+        { "type": "checkbox", "id": "flip", "label": "Point the other way", "default": false },
+        { "type": "range", "id": "x", "label": "Across the track", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 20 },
+        { "type": "range", "id": "y", "label": "Down the screen", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "depth", "label": "Depth", "min": -100, "max": 100, "step": 5, "default": 0, "info": "How much further than the track it travels." },
+        { "type": "range", "id": "tilt", "label": "Tilt", "min": -45, "max": 45, "step": 1, "unit": "deg", "default": 0 }
+      ]
+    },
+    {
+      "type": "marker",
+      "name": "Numbered marker",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "2" },
+        { "type": "color", "id": "color", "label": "Colour", "default": "#013900" },
+        { "type": "range", "id": "size", "label": "Size", "min": 24, "max": 120, "step": 2, "unit": "px", "default": 54 },
+        { "type": "range", "id": "x", "label": "Across the track", "min": 0, "max": 100, "step": 1, "unit": "%", "default": 20 },
+        { "type": "range", "id": "y", "label": "Down the screen", "min": -10, "max": 110, "step": 2, "unit": "%", "default": 50 },
+        { "type": "range", "id": "depth", "label": "Depth", "min": -100, "max": 100, "step": 5, "default": 0, "info": "How much further than the track it travels." },
+        { "type": "range", "id": "tilt", "label": "Tilt", "min": -45, "max": 45, "step": 1, "unit": "deg", "default": 0 }
+      ]
+    }
+  ],
+  "max_blocks": 40,
+  "presets": [
+    {
+      "name": "Sweet run",
+      "blocks": [
+        { "type": "word" },
+        { "type": "word" },
+        { "type": "word" },
+        { "type": "disc" },
+        { "type": "card" },
+        { "type": "note" },
+        { "type": "arrow" }
+      ]
+    }
+  ]
+}
+{% endschema %}
